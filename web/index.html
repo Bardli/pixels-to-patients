@@ -169,9 +169,10 @@
 
     function renderActs() {
       const entry = curActs.find((e) => e.layer === curLayer);
+      const shown = { ...entry, channels: entry.channels.slice(0, 8) };  // data now holds all channels; cap the deck display
       const lab = document.getElementById("chan-label");
-      if (lab) lab.textContent = `Showing ${entry.channels.length} of ${entry.feature_shape[0]} channels · feature slice z′ ${entry.feature_z}/${entry.feature_shape[1]}`;
-      mountDeck(document.getElementById("deck-mount"), entry, {
+      if (lab) lab.textContent = `Showing ${shown.channels.length} of ${entry.feature_shape[0]} channels · feature slice z′ ${entry.feature_z}/${entry.feature_shape[1]}`;
+      mountDeck(document.getElementById("deck-mount"), shown, {
         badge: `${curLayer} · axial · z′ ${entry.feature_z}/${entry.feature_shape[1]}`,
       });
       const h = entry.histogram, max = Math.max(...h.counts, 1);

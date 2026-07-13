@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mean activation map — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=12" />
 </head>
 <body>
   <nav class="chain-top">
@@ -42,6 +42,15 @@
           </p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>The channels being averaged</h2><span class="rule"></span></div>
+      <p class="intuition reveal" style="max-width:66ch">All 16 feature-map channels at <span class="mono">stage2</span> for case <span class="mono">lung_038</span> — the exact tensors this baseline averages. Most are blank: after the ReLU, a filter that doesn't respond to this patch outputs <em>all zeros</em>, so its channel adds nothing to the mean. Only <b id="chan-active">—</b> of 16 fire for this input.</p>
+      <div class="chan-grid reveal" id="channels-mount"></div>
+      <p class="figcap reveal">Each tile is one channel's <span class="mono">stage2</span> feature slice (turbo, per-channel contrast-stretched), labelled <span class="mono">ch · mean</span>. <span class="chan-dot"></span> = silent (all-zero). The mean map is these tiles, averaged and upsampled — dominated by the few that fire.</p>
     </div>
   </section>
 
@@ -96,6 +105,42 @@
   <script type="module">
     import { initBench } from "../js/bench.js?v=2";
     initBench("notgradcam");
+  </script>
+  <script type="module">
+    import { loadJSON, drawFeature } from "../js/data.js?v=2";
+    (async () => {
+      const manifest = await loadJSON("../public/data/manifest.json");
+      // cache-bust: activations.json content changes on re-export (channel count); the example id is stable
+      const acts = await loadJSON(`../public/data/examples/${manifest.examples[0]}/activations.json?cb=${Date.now()}`);
+      const s2 = acts.find((e) => e.layer === "stage2");
+      const mount = document.getElementById("channels-mount");
+      let active = 0;
+      for (const c of s2.channels) {
+        const cell = document.createElement("div");
+        cell.className = "chan-cell" + (c.max > 0 ? "" : " silent");
+        if (c.max > 0) {
+          active++;
+          const cv = document.createElement("canvas");
+          drawFeature(cv, c.slice);
+          cell.appendChild(cv);
+        } else {
+          const ph = document.createElement("div");
+          ph.className = "chan-ph"; ph.textContent = "silent";
+          cell.appendChild(ph);
+        }
+        const lab = document.createElement("span");
+        lab.className = "chan-lab";
+        lab.innerHTML = `ch ${c.index} · <b>${c.mean.toFixed(2)}</b>`;
+        cell.appendChild(lab);
+        mount.appendChild(cell);
+      }
+      const n = document.getElementById("chan-active");
+      if (n) n.textContent = String(active);
+    })().catch((e) => {
+      const m = document.getElementById("channels-mount");
+      if (m) m.innerHTML = `<span style="color:var(--danger); font-family:var(--mono); font-size:0.8rem">serve over http to load the channels</span>`;
+      console.error(e);
+    });
   </script>
   <script src="../js/reveal.js"></script>
   <script type="module">
