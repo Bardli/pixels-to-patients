@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mean activation map — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=9" />
+  <link rel="stylesheet" href="../styles.css?v=11" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,8 +52,14 @@
         <p>The mean activation map is the honest baseline: no gradients and no target class — just the mean of the feature-map channels at the tap layer, upsampled. It shows what the network is active on, before any class-discriminative signal is added.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          M(x) = Up( (1/K) Σ<sub>k</sub> A<sup>k</sup>(x) )   &nbsp;— mean over channels, then upsample
+          <span class="sym" data-sym="M">M(x)</span> = <span class="sym" data-sym="up">Up</span>( <span class="sym" data-sym="mean">(1/K) Σ<sub>k</sub></span> <span class="sym" data-sym="A">A<sup>k</sup></span>(x) )   &nbsp;— mean over channels, then upsample
         </div>
+        <ul class="math-where">
+          <li data-sym="M"><b>M(x)</b> — the saliency map produced for the input volume <b>x</b></li>
+          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap (16 channels)</li>
+          <li data-sym="mean"><b>(1/K) Σ<sub>k</sub></b> — the plain mean over all <b>K</b> = 16 channels; no gradients and no class — that is the whole point of this baseline</li>
+          <li data-sym="up"><b>Up</b> — trilinear-upsample the mean map back to the input volume size</li>
+        </ul>
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It averages the <span class="mono">stage2</span> feature channels; note the <span class="mono">target</span> argument is deliberately unused.</p>
         <div class="codeblock">
@@ -94,7 +100,9 @@
   <script src="../js/reveal.js"></script>
   <script type="module">
     import { mountChainNav } from "../js/chain.js?v=1";
+    import { wireMathLegend } from "../js/mathlegend.js?v=1";
     mountChainNav("methods/notgradcam.html", "../");
+    wireMathLegend();
   </script>
 </body>
 </html>

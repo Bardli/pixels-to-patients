@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Gradients — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=9" />
+  <link rel="stylesheet" href="../styles.css?v=11" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,8 +52,17 @@
         <p>Integrated Gradients works in input space: it integrates the gradient of the target logit along a straight path from a baseline to the real scan, and satisfies the completeness axiom.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          IG<sub>i</sub>(x) = (x<sub>i</sub> − x'<sub>i</sub>) · ∫₀¹ ∂y<sup>c</sup>(x' + α(x − x')) / ∂x<sub>i</sub> dα   &nbsp;≈&nbsp; Riemann sum over <span class="mono">steps</span>
+          <span class="sym" data-sym="ig">IG<sub>i</sub>(x)</span> = (<span class="sym" data-sym="xi">x<sub>i</sub></span> − <span class="sym" data-sym="baseline">x'<sub>i</sub></span>) · <span class="sym" data-sym="integral">∫₀¹</span> <span class="sym" data-sym="grad">∂y<sup>c</sup>(x' + </span><span class="sym" data-sym="alpha">α</span><span class="sym" data-sym="grad">(x − x')) / ∂</span><span class="sym" data-sym="xi">x<sub>i</sub></span> <span class="sym" data-sym="integral">dα</span>   &nbsp;≈&nbsp; <span class="sym" data-sym="riemann">Riemann sum</span> over <span class="mono">steps</span>
         </div>
+        <ul class="math-where">
+          <li data-sym="ig"><b>IG<sub>i</sub>(x)</b> — the attribution assigned to input voxel <b>i</b></li>
+          <li data-sym="xi"><b>x<sub>i</sub></b> — the value of input voxel <b>i</b></li>
+          <li data-sym="baseline"><b>x'<sub>i</sub></b> — voxel <b>i</b> of the baseline <b>x'</b> (here the zero volume)</li>
+          <li data-sym="integral"><b>∫<sub>0</sub><sup>1</sup> … dα</b> — integral along the straight-line path from baseline <b>x'</b> to input <b>x</b></li>
+          <li data-sym="alpha"><b>α</b> — interpolation coefficient in [0, 1] positioning a point on that path</li>
+          <li data-sym="grad"><b>∂y<sup>c</sup>/∂x<sub>i</sub></b> — gradient of the class-<b>c</b> score <b>y<sup>c</sup></b> w.r.t. input voxel <b>i</b>, at the interpolated point</li>
+          <li data-sym="riemann"><b>Riemann sum</b> — the integral is approximated by averaging gradients over <b>steps</b> = 50 discrete values of α</li>
+        </ul>
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It integrates gradients in <em>input</em> space over a 50-step path from a zero baseline.</p>
         <div class="codeblock">
@@ -106,7 +115,9 @@
   <script src="../js/reveal.js"></script>
   <script type="module">
     import { mountChainNav } from "../js/chain.js?v=1";
+    import { wireMathLegend } from "../js/mathlegend.js?v=1";
     mountChainNav("methods/integrated_gradients.html", "../");
+    wireMathLegend();
   </script>
 </body>
 </html>

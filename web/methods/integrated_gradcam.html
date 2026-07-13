@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=9" />
+  <link rel="stylesheet" href="../styles.css?v=11" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,9 +52,18 @@
         <p>Integrated Grad-CAM moves Integrated Gradients into feature space: it path-integrates the gradients with respect to the CAM-layer activations, weighted by how far those activations moved from a baseline.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          IGC = normalize( Up( | ΔA ⊙ (1/steps) Σ<sub>α</sub> ∂y<sup>c</sup>/∂A(x<sub>α</sub>) | ) )<br>
-          ΔA = A(x) − A(baseline)
+          <span class="sym" data-sym="igc">IGC</span> = <span class="sym" data-sym="norm">normalize</span>( <span class="sym" data-sym="norm">Up</span>( <span class="sym" data-sym="abs">|</span> <span class="sym" data-sym="delta">ΔA</span> <span class="sym" data-sym="hadamard">⊙</span> <span class="sym" data-sym="avg">(1/steps) Σ<sub>α</sub></span> <span class="sym" data-sym="grad">∂y<sup>c</sup>/∂A(x<sub>α</sub>)</span> <span class="sym" data-sym="abs">|</span> ) )<br>
+          <span class="sym" data-sym="delta">ΔA</span> = A(x) − A(baseline)
         </div>
+        <ul class="math-where">
+          <li data-sym="igc"><b>IGC</b> — the Integrated Grad-CAM map</li>
+          <li data-sym="norm"><b>normalize / Up</b> — min-max rescale to [0, 1], then trilinear-upsample to input size</li>
+          <li data-sym="abs"><b>| · |</b> — absolute value (magnitude)</li>
+          <li data-sym="delta"><b>ΔA = A(x) − A(baseline)</b> — the <span class="mono">stage2</span> feature difference between the input <b>x</b> and the baseline (the <em>per-volume mean</em> volume, not zero)</li>
+          <li data-sym="hadamard"><b>⊙</b> — element-wise product</li>
+          <li data-sym="avg"><b>(1/steps) Σ<sub>α</sub></b> — average over <b>steps</b> = 20 points along the path</li>
+          <li data-sym="grad"><b>∂y<sup>c</sup>/∂A(x<sub>α</sub>)</b> — gradient of the class-<b>c</b> score w.r.t. <span class="mono">stage2</span> features at interpolation point <b>x<sub>α</sub></b></li>
+        </ul>
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It path-integrates gradients at the <span class="mono">stage2</span> tap from a per-volume mean baseline.</p>
         <div class="codeblock">
@@ -112,7 +121,9 @@
   <script src="../js/reveal.js"></script>
   <script type="module">
     import { mountChainNav } from "../js/chain.js?v=1";
+    import { wireMathLegend } from "../js/mathlegend.js?v=1";
     mountChainNav("methods/integrated_gradcam.html", "../");
+    wireMathLegend();
   </script>
 </body>
 </html>

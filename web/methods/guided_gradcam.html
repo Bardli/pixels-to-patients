@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guided Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=9" />
+  <link rel="stylesheet" href="../styles.css?v=11" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,8 +52,16 @@
         <p>Guided Grad-CAM sharpens Grad-CAM's coarse localisation with guided backpropagation's high-resolution edges — combining <em>where</em> (Grad-CAM) with <em>what</em> (guided backprop).</p>
         <h3>The math</h3>
         <div class="mathblock">
-          GGC = normalize( | GuidedBP(x,c) ⊙ Up(Grad-CAM<sup>c</sup>) | )
+          <span class="sym" data-sym="ggc">GGC</span> = <span class="sym" data-sym="norm">normalize</span>( <span class="sym" data-sym="abs">|</span> <span class="sym" data-sym="gbp">GuidedBP(x,c)</span> <span class="sym" data-sym="hadamard">⊙</span> <span class="sym" data-sym="upgc">Up(Grad-CAM<sup>c</sup>)</span> <span class="sym" data-sym="abs">|</span> )
         </div>
+        <ul class="math-where">
+          <li data-sym="ggc"><b>GGC</b> — the Guided Grad-CAM map</li>
+          <li data-sym="norm"><b>normalize</b> — min-max rescale the result to [0, 1]</li>
+          <li data-sym="abs"><b>| · |</b> — absolute value (magnitude), taken voxel-wise</li>
+          <li data-sym="gbp"><b>GuidedBP(x, c)</b> — guided backpropagation: the input-space gradient with ReLUs masked to pass only positive signal, giving sharp high-resolution edges</li>
+          <li data-sym="hadamard"><b>⊙</b> — element-wise product</li>
+          <li data-sym="upgc"><b>Up(Grad-CAM<sup>c</sup>)</b> — the class-<b>c</b> Grad-CAM map upsampled to input size</li>
+        </ul>
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It reuses <span class="mono">gradcam()</span> and <span class="mono">guided_backprop_raw()</span>, then takes their product.</p>
         <div class="codeblock">
@@ -95,7 +103,9 @@
   <script src="../js/reveal.js"></script>
   <script type="module">
     import { mountChainNav } from "../js/chain.js?v=1";
+    import { wireMathLegend } from "../js/mathlegend.js?v=1";
     mountChainNav("methods/guided_gradcam.html", "../");
+    wireMathLegend();
   </script>
 </body>
 </html>
