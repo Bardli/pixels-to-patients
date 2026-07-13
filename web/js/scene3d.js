@@ -61,7 +61,7 @@ export function mountDeck(mount, entry, { badge } = {}) {
   deck.className = "deck3d";
   deck.style.setProperty("--n", n);
   deck.style.setProperty("--mid", (n - 1) / 2);
-  deck.style.setProperty("--gap", "24px");
+  deck.style.setProperty("--gap", "48px");
 
   const scene = document.createElement("div");
   scene.className = "beat-scene on";
@@ -90,15 +90,7 @@ export function mountDeck(mount, entry, { badge } = {}) {
     attachOrbit(stage, (dx, dy) => { state.ry += dx * 0.4; state.rx -= dy * 0.3; apply(); });
   }
 
-  const ctrl = document.createElement("div");
-  ctrl.className = "deck-ctrl";
-  ctrl.innerHTML =
-    '<span class="dc-lab">flat</span>' +
-    '<input type="range" min="2" max="48" value="24" step="1" aria-label="Fan the channels apart">' +
-    '<span class="dc-lab">fanned</span>';
-  const range = ctrl.querySelector("input");
-  range.addEventListener("input", () => deck.style.setProperty("--gap", range.value + "px"));
-  mount.appendChild(ctrl);
+  // Deck is fixed fully fanned (--gap 48px, set above); the flat↔fanned slider was removed by design.
 }
 
 /* ------------------------------------------------------------------
