@@ -1,0 +1,22 @@
+METHOD 05 - ECCV 2014
+input . stagel stage2 . stage3 fc
+1:32? 8-167 16-87 32-17 42
+H(p) = FQ) ~ F&%O (L~ Mps) + ¥ Mpa) . nn
+Sensitivity (ECAH Slide mask Mp,s over the input. For each position, re-run the Ba | |
+forward; accumulate the drop in FS.
+OUR HANDLE
+PROS Causal — no gradient approximation. Immune to saturation.
+. Works on black-box / non-differentiable models.
+Zeiler & Fergus
+peut ae understancing cons ~225 forwards per image (mask 4x4, stride 2). Mask design
+onvolutiona etworks. ry
+sensitive (size, stride, fill v). OOD shift from padding. No joint
+arXiv:1311.2901 - ECCV 2014 (Se, SHEE lly) PEEING) RO
+effects.
+The black-box one. Causally clean, gradient-free n=
+— and three orders of magnitude more expensive.
+INPUT - GT - OCCLUSION
+Occlusion sensitivity — sweep a mask, record probability drop
+1. input 2.1 occlude (x=5,y=9) 2.2 occlude (x=15,y=9) 2.3 occlude (x=23,y=5) 2.4 occlude (x=20,y=25} 3. heatmap
+P(c=0) = 1.000 P=0.954 drop=+0.046 P=1.000 drop=+0.000 P=1.000 drop=+0.000 P=1.000 drop=+0.000 = baseline — P 4. overlay
+10 METHOD 05

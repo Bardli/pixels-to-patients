@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grad-CAM on CT — From Pixels to Patients</title>
+  <meta name="description" content="An implementation-first tour of seven attribution methods for medical-imaging CNNs, measured on real lung CT. MICCAI Educational Challenge 2026." />
+  <link rel="stylesheet" href="styles.css?v=5" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <div class="nav-links">
+      <a href="network.html">Network</a>
+      <a href="code.html">Code</a>
+      <a href="methods/">Methods</a>
+      <a href="reproduce.html">Reproduce</a>
+      <a href="about.html">About</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container hero-grid">
+      <div class="stagger">
+        <p class="label eyeline">MICCAI Educational Challenge 2026 · From Pixels to Patients</p>
+        <h1>Is the network looking at the <em>tumour</em>&nbsp;— or an artifact?</h1>
+        <p class="lede">A hands-on tour of seven attribution methods, implemented from scratch and measured on real lung&#8209;CT. Hover the layers, step through the computation, and see&nbsp;— quantitatively&nbsp;— where each heat&#8209;map actually lands.</p>
+        <div class="cta-row">
+          <a class="btn primary" href="methods/">Explore the methods <span class="arrow">→</span></a>
+          <a class="btn" href="code.html">Read the code <span class="arrow">→</span></a>
+        </div>
+      </div>
+
+      <figure class="panel" aria-label="Reading panel: CT input, ground-truth tumour mask, and Grad-CAM heat-map for one lung case">
+        <div class="panel-bar">
+          <span>Case · lung_038 · tumour-present</span>
+          <span class="dot" aria-hidden="true"></span>
+        </div>
+        <div class="scan-row">
+          <figure class="scan">
+            <img src="public/data/examples/00_lung_038_pos1/ct_slice.png" alt="Axial CT slice of a lung patch" />
+            <figcaption>CT input</figcaption>
+          </figure>
+          <figure class="scan">
+            <img src="public/data/examples/00_lung_038_pos1/mask_slice.png" alt="Ground-truth tumour mask overlaid in green" />
+            <figcaption class="gt">GT mask</figcaption>
+          </figure>
+          <figure class="scan">
+            <img src="public/data/examples/00_lung_038_pos1/attributions/gradcam.png" alt="Grad-CAM heat-map overlaid on the CT slice" />
+            <figcaption class="accent">Grad-CAM</figcaption>
+          </figure>
+        </div>
+      </figure>
+    </div>
+  </header>
+
+  <section id="the-network">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="num mono">01</span>
+        <h2>The network</h2>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <p class="lede reveal" style="margin-bottom:1.6rem; max-width:72ch">
+        One lung&#8209;CT patch — the scan above — is the running example for this entire piece, from the
+        <b>Medical Segmentation Decathlon</b> (<span class="mono">Task06_Lung</span>), reframed as a
+        tumour&#8209;present&#8209;vs&#8209;not classifier. Watch it flow through the network — the <b>real activation maps</b>
+        at every layer. <b>Hover any layer</b> to enlarge it and unfold its channels.
+      </p>
+      <div class="reveal" id="flow-mount"></div>
+      <p class="figcap reveal" style="margin-top:1.1rem">Real activations for case <span class="mono">lung_038</span> · turbo-coloured, contrast-stretched per channel · hover a layer to expand its top channels.</p>
+      <div class="cta-row reveal" style="margin-top:1.7rem">
+        <a class="btn primary" href="network.html">Explore the network <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="methods-strip">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="num mono">02</span>
+        <h2>Seven neighbouring methods</h2>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <p class="lede reveal" style="margin-bottom:1.8rem">From the plain class-agnostic baseline to path-integrated feature attribution — each with its intuition, the real code, and its failure modes.</p>
+      <div class="methods-strip reveal">
+        <a class="chip" href="methods/notgradcam.html"><span class="bullet"></span>Mean activation map</a>
+        <a class="chip" href="methods/gradcam.html"><span class="bullet"></span>Grad-CAM</a>
+        <a class="chip" href="methods/guided_gradcam.html"><span class="bullet"></span>Guided Grad-CAM</a>
+        <a class="chip" href="methods/layercam.html"><span class="bullet"></span>LayerCAM</a>
+        <a class="chip" href="methods/occlusion.html"><span class="bullet"></span>Occlusion</a>
+        <a class="chip" href="methods/integrated_gradients.html"><span class="bullet"></span>Integrated Gradients</a>
+        <a class="chip" href="methods/integrated_gradcam.html"><span class="bullet"></span>Integrated Grad-CAM</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="build">
+    <div class="container">
+      <div class="sec-head reveal">
+        <span class="num mono">03</span>
+        <h2>Built to be trusted</h2>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <div class="buildnote reveal">
+        <div class="item">
+          <b>Real data</b>
+          <p>Medical Segmentation Decathlon <span class="mono">Task06_Lung</span> tumour CT — reframed as a patch classifier: tumour-present vs. not.</p>
+        </div>
+        <div class="item">
+          <b>Implementation-first</b>
+          <p>Every method is real, readable code — not a black box. The non-obvious gotchas that make it work are called out.</p>
+        </div>
+        <div class="item">
+          <b>Hashed &amp; reproducible</b>
+          <p>Checkpoint, data cache and <span class="mono">uv.lock</span> are hashed into every bundle. No hand-drawn figures.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <hr class="heatrule" style="margin-bottom:2rem" />
+      <div class="foot-grid">
+        <p class="disclosure">
+          Grad-CAM on CT — an educational submission for the MICCAI Educational Challenge 2026.<br />
+          Figures and metrics are generated by the accompanying open-source code and hashed for provenance.<br />
+          AI-use disclosure: portions of this project were built with the assistance of an AI coding assistant (Claude).
+        </p>
+        <div class="mono" style="font-size:0.72rem; text-align:right; line-height:2">
+          <a class="link" href="reproduce.html">Reproduce</a> ·
+          <a class="link" href="about.html">About &amp; sources</a><br />
+          <span style="color:var(--ink-faint)">static site · no tracking · no build step</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { loadJSON } from "./js/data.js?v=2";
+    import { mountFlow } from "./js/scene3d.js?v=7";
+    const ROOT = "public/data";
+    (async () => {
+      const manifest = await loadJSON(`${ROOT}/manifest.json`);
+      const id = manifest.examples[0];
+      const [acts, ctPayload, heatPayload] = await Promise.all([
+        loadJSON(`${ROOT}/examples/${id}/activations.json`),
+        loadJSON(`${ROOT}/examples/${id}/ct_slice.json`),
+        loadJSON(`${ROOT}/examples/${id}/attributions/gradcam.json`),
+      ]);
+      mountFlow(document.getElementById("flow-mount"), { acts, ctPayload, heatPayload });
+    })().catch((e) => {
+      const m = document.getElementById("flow-mount");
+      if (m) m.innerHTML = `<span style="color:var(--danger); font-family:var(--mono); font-size:0.8rem">serve over http and run web-export to render the activations</span>`;
+      console.error(e);
+    });
+  </script>
+  <script src="js/reveal.js"></script>
+</body>
+</html>

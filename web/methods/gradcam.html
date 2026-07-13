@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grad-CAM — Grad-CAM on CT</title>
+  <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
+  <link rel="stylesheet" href="../styles.css?v=6" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <div class="nav-links">
+      <a href="../network.html">Network</a>
+      <a href="../code.html">Code</a>
+      <a href="./" aria-current="page">Methods</a>
+      <a href="../reproduce.html">Reproduce</a>
+      <a href="../about.html">About</a>
+    </div>
+  </nav>
+
+  <div class="page-head">
+    <div class="container">
+      <p class="label kicker">Method 02 / 07 · gradient-based · class-discriminative</p>
+      <h1>Grad-CAM</h1>
+      <p class="intuition">Weight each feature-map channel by how strongly its <em>average gradient</em> pushes the target class, sum the weighted channels, keep the positive part, and upsample. The canonical class-discriminative heat-map.</p>
+    </div>
+  </div>
+
+  <section style="border-top:none; padding-top:0">
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>Reading bench</h2><span class="rule"></span></div>
+      <div class="bench">
+        <div>
+          <div class="tabs" id="tabs" role="tablist" aria-label="Example case"></div>
+          <div class="viewer" id="viewer" aria-label="CT slice with Grad-CAM heat-map; hover to read voxel values">
+            <canvas id="ct"></canvas><canvas id="heat"></canvas><div class="crosshair" id="cross"></div>
+          </div>
+          <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
+          <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with Grad-CAM overlaid · real 32³ voxels</p>
+        </div>
+        <div>
+          <p class="verdict" id="verdict">&nbsp;</p>
+          <div class="scorecard" id="scorecard"></div>
+          <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>How it works</h2><span class="rule"></span></div>
+      <div class="prose reveal">
+        <p>Grad-CAM asks one question of a trained network: <em>which feature-map channels mattered for this class, and where were they active?</em> It answers with a single backward pass.</p>
+        <h3>The math</h3>
+        <div class="mathblock">
+          α<sub>k</sub><sup>c</sup> = GAP( ∂y<sup>c</sup> / ∂A<sup>k</sup> )   &nbsp;— average-pool the gradient over the volume<br>
+          L<sup>c</sup> = ReLU( Σ<sub>k</sub> α<sub>k</sub><sup>c</sup> · A<sup>k</sup> )   &nbsp;— weighted sum of channels, keep positive<br>
+          heat = trilinear-upsample( L<sup>c</sup> → input size )
+        </div>
+        <h3>The implementation</h3>
+        <p>The real function from the codebase — nothing hidden. The CAM is tapped at <span class="mono">stage2</span>, a 16-channel feature volume.</p>
+        <div class="codeblock">
+          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>gradcam()</span></div>
+<pre>def gradcam(model, x, target=None, layer="stage2", normalize=True):
+    model.eval()
+    model.zero_grad(set_to_none=True)
+    logits, activation = _cam_forward(model, x, layer)   # activation.retain_grad()
+    score_for_target(logits, target).backward()          # one backward pass
+    gradients = activation.grad                           # dyc / dA^k
+    weights = gradients.mean(dim=(2, 3, 4), keepdim=True) # a_k^c = GAP(grad)
+    cam = (weights * activation).sum(dim=1, keepdim=True).clamp_min(0)  # ReLU
+    cam = upsample_to_input(cam, x)                       # trilinear
+    return normalize_map(cam) if normalize else cam</pre>
+        </div>
+        <h3>Gotchas that make it work</h3>
+        <ol class="gotchas">
+          <li><b>Gradients are global-average-pooled</b> over the whole 3D volume to get one weight per channel — the core CAM assumption that a channel's importance is spatially uniform.</li>
+          <li><b>ReLU comes after the weighted sum</b>, not before. It keeps only evidence <em>for</em> the target class, which is why Grad-CAM maps look "positive".</li>
+          <li><b>Tapped at <span class="mono">stage2</span></b>, so the raw map is at feature-volume resolution, then trilinearly upsampled. The heat-map is inherently coarse — a property of where you tap.</li>
+          <li><b><span class="mono">activation.retain_grad()</span> is mandatory</b> — <span class="mono">stage2</span> is a non-leaf tensor, so without it <span class="mono">activation.grad</span> is <span class="mono">None</span>.</li>
+        </ol>
+      </div>
+
+      <nav class="pager">
+        <a href="notgradcam.html"><span class="k">← Previous</span>Mean activation map</a>
+        <a class="nxt" href="guided_gradcam.html"><span class="k">Next →</span>Guided Grad-CAM</a>
+      </nav>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <hr class="heatrule" style="margin-bottom:1.6rem" />
+      <p class="disclosure">Heat-maps and metrics generated by <span class="mono">gradcam-repro web-export</span> and hashed in <span class="mono">manifest.json</span>. AI-use disclosure: built with the assistance of an AI coding assistant (Claude).</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initBench } from "../js/bench.js?v=2";
+    initBench("gradcam");
+  </script>
+  <script src="../js/reveal.js"></script>
+</body>
+</html>

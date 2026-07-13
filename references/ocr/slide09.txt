@@ -1,0 +1,19 @@
+METHOD 04 - IEEE TIP 2021
+input . stagel stage2 . stage3 fc
+1-322 8-162 16-8? 32-12 +2
+Q | _ 7 ays k
+Tayacaw = & ReLU(Zr) © A es LJ L |
+LayerCAM ‘
+OUR HANDLE
+MECHANISM Per-pixel positive gradient as weight; element-wise multiply with
+activation; sum across channels — no spatial averaging.
+Jiang, Zhang, Hou, Cheng, Wei
+Exploring Hierarchical Class PROS Works at any stage. Higher spatial resolution from shallow layers.
+Activation Maps for Localization. Same cost as Grad-CAM.
+IEEE TIP 30:5875-5888
+; CONS Still gradient-based — saturation remains. At the deepest stage it
+DY stage: Drop the spatial average in a, — per- collapses back to vanilla Grad-CAM.
+position weights let shallow features work too.
+INPUT - GT - LAYERCAM
+1 input aust 2 anal a eg ara 9 nag arate = (weg grasses)
+09 METHOD 04

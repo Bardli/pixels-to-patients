@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Occlusion Sensitivity — Grad-CAM on CT</title>
+  <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
+  <link rel="stylesheet" href="../styles.css?v=6" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <div class="nav-links">
+      <a href="../network.html">Network</a>
+      <a href="../code.html">Code</a>
+      <a href="./" aria-current="page">Methods</a>
+      <a href="../reproduce.html">Reproduce</a>
+      <a href="../about.html">About</a>
+    </div>
+  </nav>
+
+  <div class="page-head">
+    <div class="container">
+      <p class="label kicker">Method 05 / 07 · perturbation-based · model-agnostic</p>
+      <h1>Occlusion Sensitivity</h1>
+      <p class="intuition">No gradients at all — slide a small cube over the volume, blank it out, and measure how much the tumour probability drops. A big drop means an important region.</p>
+    </div>
+  </div>
+
+  <section style="border-top:none; padding-top:0">
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>Reading bench</h2><span class="rule"></span></div>
+      <div class="bench">
+        <div>
+          <div class="tabs" id="tabs" role="tablist" aria-label="Example case"></div>
+          <div class="viewer" id="viewer" aria-label="CT slice with the attribution heat-map; hover to read voxel values">
+            <canvas id="ct"></canvas><canvas id="heat"></canvas><div class="crosshair" id="cross"></div>
+          </div>
+          <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
+          <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+        </div>
+        <div>
+          <p class="verdict" id="verdict">&nbsp;</p>
+          <div class="scorecard" id="scorecard"></div>
+          <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>How it works</h2><span class="rule"></span></div>
+      <div class="prose reveal">
+        <p>Occlusion sensitivity uses no gradients at all. It treats the network as a black box: blank out a region of the input, measure how far the tumour probability falls, and map that drop back onto the volume.</p>
+        <h3>The math</h3>
+        <div class="mathblock">
+          H(p) = max(0, P(c | x) − P(c | x with a cube blanked at p) )
+        </div>
+        <h3>The implementation</h3>
+        <p>The real function from the codebase — nothing hidden. It perturbs the <em>input</em> volume directly — no feature tap and no gradients.</p>
+        <div class="codeblock">
+          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>occlusion_sensitivity()</span></div>
+<pre>def occlusion_sensitivity(
+    model: ToyCNN,
+    x: torch.Tensor,
+    target: int | torch.Tensor | None = None,
+    mask_size: int = 4,
+    stride: int = 4,
+    fill_value: float | None = None,
+    batch_size: int = 64,
+) -&gt; torch.Tensor:
+    model.eval()
+    with torch.no_grad():
+        logits = model(x)
+        if target is None:
+            target_tensor = logits.argmax(dim=1)
+        elif isinstance(target, int):
+            target_tensor = torch.full((x.shape[0],), target, device=x.device, dtype=torch.long)
+        else:
+            target_tensor = target.to(device=x.device, dtype=torch.long)
+        base_probs = logits.softmax(dim=1).gather(1, target_tensor.view(-1, 1)).view(-1)
+    batch, _, depth, height, width = x.shape
+    heatmap = torch.zeros((batch, 1, depth, height, width), device=x.device, dtype=x.dtype)
+    counts = torch.zeros_like(heatmap)
+    fill_tensor = (
+        x.detach().mean(dim=(1, 2, 3, 4), keepdim=True)
+        if fill_value is None
+        else None
+    )
+    positions = [
+        (z, y, x0)
+        for z in range(0, depth - mask_size + 1, stride)
+        for y in range(0, height - mask_size + 1, stride)
+        for x0 in range(0, width - mask_size + 1, stride)
+    ]
+    for start in range(0, len(positions), batch_size):
+        chunk = positions[start : start + batch_size]
+        occluded = x.repeat_interleave(len(chunk), dim=0).clone()
+        for sample_idx in range(batch):
+            offset = sample_idx * len(chunk)
+            for j, (z, y, x0) in enumerate(chunk):
+                replacement = fill_value if fill_tensor is None else fill_tensor[sample_idx]
+                occluded[
+                    offset + j,
+                    :,
+                    z : z + mask_size,
+                    y : y + mask_size,
+                    x0 : x0 + mask_size,
+                ] = replacement
+        with torch.no_grad():
+            probs = model(occluded).softmax(dim=1)
+        probs = probs.view(batch, len(chunk), -1)
+        target_probs = probs.gather(
+            2, target_tensor.view(batch, 1, 1).expand(batch, len(chunk), 1)
+        ).squeeze(2)
+        drops = base_probs[:, None] - target_probs
+        for j, (z, y, x0) in enumerate(chunk):
+            heatmap[
+                :,
+                :,
+                z : z + mask_size,
+                y : y + mask_size,
+                x0 : x0 + mask_size,
+            ] += drops[:, j].view(batch, 1, 1, 1, 1)
+            counts[:, :, z : z + mask_size, y : y + mask_size, x0 : x0 + mask_size] += 1
+    heatmap = (heatmap / counts.clamp_min(1)).clamp_min(0)
+    return normalize_map(heatmap)</pre>
+        </div>
+        <h3>Gotchas that make it work</h3>
+        <ol class="gotchas">
+          <li><b>The cube is filled with the per-volume MEAN, not zero</b> — zero-fill injects a fake black-cube edge the network reacts to, corrupting the map.</li>
+          <li><b>Model-agnostic</b> — treats the network as a black box; no backprop.</li>
+          <li><span class="mono">stride</span>/<span class="mono">mask_size</span> trade resolution against compute; it is by far the slowest method here.</li>
+        </ol>
+      </div>
+
+      <nav class="pager">
+        <a href="layercam.html"><span class="k">← Previous</span>LayerCAM</a>
+        <a class="nxt" href="integrated_gradients.html"><span class="k">Next →</span>Integrated Gradients</a>
+      </nav>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <hr class="heatrule" style="margin-bottom:1.6rem" />
+      <p class="disclosure">Heat-maps and metrics generated by <span class="mono">gradcam-repro web-export</span> and hashed in <span class="mono">manifest.json</span>. AI-use disclosure: built with the assistance of an AI coding assistant (Claude).</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initBench } from "../js/bench.js?v=2";
+    initBench("occlusion");
+  </script>
+  <script src="../js/reveal.js"></script>
+</body>
+</html>

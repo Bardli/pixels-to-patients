@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.DS_Store
+
+# Virtual environments
+.venv
+
+# Experiment outputs
+artifacts/
+outputs/
+/data/
+*.pt
+*.pth
+
+# Local deck render caches
+deck/.artifact-tool/
+
+# Local tooling / editor / agent state
+.claude/
+.vscode/

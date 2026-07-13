@@ -1,0 +1,8 @@
+10 MINUTES FOR QUESTIONS
+1D)
+ISCUSSION.
+Q-: 61 Q- 02
+Which of these pass Adebayo's sanity checks — and which look fine but don't? | How would you choose an IG baseline for a clinical MRI study?
+Q + 03 o> 04
+Why didn't we cover Score-CAM, Ablation-CAM, or Grad-CAM++? What does "resolution" mean for a 3D encoder downsampled five times?
+19

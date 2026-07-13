@@ -1,0 +1,17 @@
+REFERENCES + CHRONOLOGICAL
+Eight papers, fourteen years.
+[1] Zeiler & Fergus - 2014 [2] Springenberg, Dosovitskiy, Brox, Riedmiller - 2015
+Visualizing and Understanding Convolutional Networks Striving for Simplicity: The All Convolutional Net
+ECCV 2014 - arXiv:1311.2901 - Occlusion ICLR-W 2015 + arXiv:1412.6806 - Guided BP
+[3] Zhou, Khosla, Lapedriza, Oliva, Torralba - 2016 [4] Selvaraju et al. - 2017
+Learning Deep Features for Discriminative Localization Grad-CAM: Visual Explanations from Deep Networks via Gradient-based
+CVPR 2016 - arXiv:1512.04150 - CAM Localization
+ICCV 2017 + arXiv:1610.02391 + Grad-CAM, Guided Grad-CAM
+[5] Sundararajan, Taly, Yan - 2017 {6] Adebayo, Gilmer, Muelly, Goodfellow, Hardt, Kim : 2018
+Axiomatic Attribution for Deep Networks Sanity Checks for Saliency Maps
+ICML 2017 - arXiv:1703.01365 Integrated Gradients NeurIPS 2018 - arXiv:1810.03292 - the Guided BP critique
+[7] Jiang, Zhang, Hou, Cheng, Wei - 2021 [8] Sattarzadeh et al. - 2021
+LayerCAM: Exploring Hierarchical Class Activation Maps for Localization Integrated Grad-CAM: Sensitivity-Aware Visual Explanation via Integrated
+IEEE TIP 30 - DOI:10.1109/TIP.2021.3089943 Gradient-Based Scoring
+ICASSP 2021 - arXiv:2102.07805
+18 REFERENCES

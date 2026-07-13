@@ -1,0 +1,13 @@
+ORIGIN - 2016
+CAM — the idea Grad-CAM generalised.
+Zhou, Khosla, Lapedriza, Oliva, Torralba - Learning Deep Features for Discriminative Localization -
+CVPR 2016
+cAM GRAD-CAM
+Use FC weights as channel importance. Replace we with the gradient.
+Leam = wy A ad cil ay®
+k % = 7D oat
+ij
+Requires Conv — GAP FC — Softmax at the end. Modify or retrain . |
+airenige. Any CNN, no retraining, no architectural constraint.
+Almost every method we cover today is a remix of two questions CAM raises: which channel matters, and where in that channel.
+93 ORIGIN

@@ -1,0 +1,33 @@
+[project]
+name = "gradcam-repro"
+version = "0.1.0"
+description = "Reproduce the Grad-CAM toy attribution experiment from GradCam.pptx"
+readme = "README.md"
+authors = [
+    { name = "Bardli", email = "baidu_li_2001@163.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "matplotlib>=3.10.9",
+    "nibabel>=5.4.2",
+    "numpy>=2.2.6",
+    "pillow>=12.2.0",
+    "torch>=2.12.0",
+]
+
+[project.scripts]
+gradcam-repro = "gradcam_repro:main"
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

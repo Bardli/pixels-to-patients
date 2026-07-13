@@ -1,0 +1,13 @@
+DEMO II Green = true class. Red = counterfactual. A class-discriminative method should
+
+. shift attention to the other half when asked about the wrong class.
+Same input. Why class 0? vs Why class 1?
+
+Class discriminablty ~ same input, two questions: ‘why class 0” vs why cass 17
+Coreen ttle = true cis. Rad thie = counterfactus A casy-alacrminativewrethed snaule sn actenton to the OTTER hat when asked sbout the wrong class.
+Eg
+
+NOTGRADCAM GRADCAM + IG LAYERCAM + IGC
+Two columns identical. As designed — no class signal Counterfactual map collapses to near-zero — sharp When asked the wrong class, attention moves to the
+in, no class signal out. class separation, well-behaved gradients. other half. Truly counterfactual response.
+14 DEMO II

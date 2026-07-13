@@ -1,0 +1,26 @@
+METHOD 03 - ICCV 2017 /
+
+input stagel stage2 stage3 fc
+ICLR-W 2015 8-162 - 16-8? 32-12 - +2
+
+GUIDED RELU BACKWARD
+aL x al. al.
+op = 1x > 0)- 1 > 0) ae
+Guided Grad-CAM es ae
+Loac = GuidedBP(x;y) © Upsample(LGraa-cam )
+OUR HANDLE MECHANISM Guided BP gates ReLU backward by both forward activation and ee | | Ea
+guided _gradcam gradient sign; multiply element-wise with the upsampled Grad-
+CAM.
+Selvaraju et al. (combination) - 2017
+Springenberg et @l. (Guided BP) - PROS Pixel-level detail with a class-aware mask. Visually compelling —
+arXiv: 1412.6806 the staple of paper figures.
+Fails Adebayo's sanity checks cons _ a we AeGERTENIPG
+(NeurlPS 2018) — visually compelling, but Gui led BP is not a true grac ient — an impute gradient" for
+behaves like an edge detector. visual effect. Fails permutation-based sanity checks. TUT o Gr « GUE) Gamer
+Guided Grad-CAM — pixel-level guided saliency masked by Grad-CAM
+2. vanilla ay/ax 3. guided BP 4, Grad-CAM map 5. guided x Grad-cam 6. [product]
+1. input (passes neg. grads) (neg biocked, sharp) {class-aware but coarse) (elementwise) overlay
++ + |
+i &
+
+08 METHOD 03

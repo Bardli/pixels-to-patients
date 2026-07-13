@@ -1,0 +1,19 @@
+APPLIED NOTES
+
+What changes when the input is a 3D volume.
+
+91 Resolution decay is harsh 82 Occlusion must be batched
+160° input through five down-samples + 5°-10? voxels at the deepest Single masked forwards over a 3D volume are untenable. Stack > 16
+stage. Grad-CAM barely localises structure; LayerCAM at a mid-stage occluded inputs per batch.
+usually wins.
+
+93 = Baselines are non-trivial 84 = Multi-moddal inputs
+For z-scored MRI, zero = mean is reasonable. For unnormalised data, use T1/T2/ FLAIR: average or sum across modalities for one map, or render a
+x.mean(). Consider Expected Gradients (Erion et al., 2021) for principled heatmap per modality. Both are defensible.
+baselines.
+
+95 Slice selection 86 = Normalisation in-nask
+3D heatmaps don't render directly. Prefer slices intersecting the GT Edge artefacts (air, skull boundary) dominate raw heatmaps. Clip to [1%.
+segmentation; fall back to the central slice 99%] inside the brain mask before linear scaling.
+
+16 3D NOTES

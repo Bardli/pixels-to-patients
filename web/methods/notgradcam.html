@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mean activation map — Grad-CAM on CT</title>
+  <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
+  <link rel="stylesheet" href="../styles.css?v=6" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <div class="nav-links">
+      <a href="../network.html">Network</a>
+      <a href="../code.html">Code</a>
+      <a href="./" aria-current="page">Methods</a>
+      <a href="../reproduce.html">Reproduce</a>
+      <a href="../about.html">About</a>
+    </div>
+  </nav>
+
+  <div class="page-head">
+    <div class="container">
+      <p class="label kicker">Method 01 / 07 · class-agnostic · baseline</p>
+      <h1>Mean activation map</h1>
+      <p class="intuition">The simplest possible map — average the feature-map channels at the CAM layer and upsample. No gradients, no target class. A baseline that shows what the class-discriminative methods actually <em>add</em>.</p>
+    </div>
+  </div>
+
+  <section style="border-top:none; padding-top:0">
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>Reading bench</h2><span class="rule"></span></div>
+      <div class="bench">
+        <div>
+          <div class="tabs" id="tabs" role="tablist" aria-label="Example case"></div>
+          <div class="viewer" id="viewer" aria-label="CT slice with the attribution heat-map; hover to read voxel values">
+            <canvas id="ct"></canvas><canvas id="heat"></canvas><div class="crosshair" id="cross"></div>
+          </div>
+          <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
+          <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+        </div>
+        <div>
+          <p class="verdict" id="verdict">&nbsp;</p>
+          <div class="scorecard" id="scorecard"></div>
+          <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>How it works</h2><span class="rule"></span></div>
+      <div class="prose reveal">
+        <p>The mean activation map is the honest baseline: no gradients and no target class — just the mean of the feature-map channels at the tap layer, upsampled. It shows what the network is active on, before any class-discriminative signal is added.</p>
+        <h3>The math</h3>
+        <div class="mathblock">
+          M(x) = Up( (1/K) Σ<sub>k</sub> A<sup>k</sup>(x) )   &nbsp;— mean over channels, then upsample
+        </div>
+        <h3>The implementation</h3>
+        <p>The real function from the codebase — nothing hidden. It averages the <span class="mono">stage2</span> feature channels; note the <span class="mono">target</span> argument is deliberately unused.</p>
+        <div class="codeblock">
+          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>notgradcam()</span></div>
+<pre>def notgradcam(
+    model: ToyCNN, x: torch.Tensor, target: int | torch.Tensor | None = None, layer: str = TARGET_LAYER
+) -&gt; torch.Tensor:
+    del target
+    model.eval()
+    with torch.no_grad():
+        _, features = model(x, return_features=True)
+        cam = features[layer].mean(dim=1, keepdim=True)
+    return normalize_map(upsample_to_input(cam, x))</pre>
+        </div>
+        <h3>Gotchas that make it work</h3>
+        <ol class="gotchas">
+          <li><b>Class-agnostic</b> — the <span class="mono">target</span> argument is ignored; the map is identical for every class.</li>
+          <li><b>No backward pass</b> — pure forward activations, <span class="mono">torch.no_grad()</span>.</li>
+          <li>It answers "where is the network active?", not "where for THIS class?" — the honest baseline against which Grad-CAM's value is judged.</li>
+        </ol>
+      </div>
+
+      <nav class="pager">
+        <a href="./"><span class="k">← Back</span>All methods</a>
+        <a class="nxt" href="gradcam.html"><span class="k">Next →</span>Grad-CAM</a>
+      </nav>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <hr class="heatrule" style="margin-bottom:1.6rem" />
+      <p class="disclosure">Heat-maps and metrics generated by <span class="mono">gradcam-repro web-export</span> and hashed in <span class="mono">manifest.json</span>. AI-use disclosure: built with the assistance of an AI coding assistant (Claude).</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initBench } from "../js/bench.js?v=2";
+    initBench("notgradcam");
+  </script>
+  <script src="../js/reveal.js"></script>
+</body>
+</html>

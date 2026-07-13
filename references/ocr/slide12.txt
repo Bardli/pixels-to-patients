@@ -1,0 +1,22 @@
+METHOD 07 - ICASSP 2021
+
+input . stagel . stage2 . stage3 . fc
+
+1:32? 8-167 16-8? 32-17 72
+OQ or : : ee ES i.
+I d WEOD= Saag 7 ARO) ALO) da
+
+Ligc(X) = ReLU(Y, WFC)
+OUR HANDLE
+integrated gradcam .
+MECHANISM 20 steps along x = x from a zero baseline. Integrate ay /aA*
+Sattarzadeh et al. - ICASSP 2021 . maultip’y by AAK , sum, ReLU.
+Sensitivity-Aware Visual Explanation
+via Integrated Gradient-Based Scoring PROS Anti-saturation (IG inheritance). Per-position weights (LayerCAM
++ arXiv:2102.07805 inheritance). Axiomatic basis.
+IG's path integral applied to channel weights
+instead of input pixels. Inherits LayerCAM's per- calls ~m x Grad-CAM cost. Baseline-dependent. At deep layers, often
+position rule. indistinguishable from vanilla Grad-CAM. INPUT - GT + INTEGRATED GRADCAM
+o .
+
+12 METHOD 07
