@@ -5,18 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LayerCAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=6" />
+  <link rel="stylesheet" href="../styles.css?v=9" />
 </head>
 <body>
-  <nav class="nav">
+  <nav class="chain-top">
     <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
-    <div class="nav-links">
-      <a href="../network.html">Network</a>
-      <a href="../code.html">Code</a>
-      <a href="./" aria-current="page">Methods</a>
-      <a href="../reproduce.html">Reproduce</a>
-      <a href="../about.html">About</a>
-    </div>
+    <div class="chain-rail" data-chain-rail></div>
   </nav>
 
   <div class="page-head">
@@ -87,13 +81,10 @@
           <li>Still tapped at <span class="mono">stage2</span> and trilinearly upsampled.</li>
         </ol>
       </div>
-
-      <nav class="pager">
-        <a href="guided_gradcam.html"><span class="k">← Previous</span>Guided Grad-CAM</a>
-        <a class="nxt" href="occlusion.html"><span class="k">Next →</span>Occlusion</a>
-      </nav>
     </div>
   </section>
+
+  <div class="chain-foot" data-chain-foot></div>
 
   <footer>
     <div class="container">
@@ -107,5 +98,9 @@
     initBench("layercam");
   </script>
   <script src="../js/reveal.js"></script>
+  <script type="module">
+    import { mountChainNav } from "../js/chain.js?v=1";
+    mountChainNav("methods/layercam.html", "../");
+  </script>
 </body>
 </html>

@@ -5,18 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=6" />
+  <link rel="stylesheet" href="../styles.css?v=9" />
 </head>
 <body>
-  <nav class="nav">
+  <nav class="chain-top">
     <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
-    <div class="nav-links">
-      <a href="../network.html">Network</a>
-      <a href="../code.html">Code</a>
-      <a href="./" aria-current="page">Methods</a>
-      <a href="../reproduce.html">Reproduce</a>
-      <a href="../about.html">About</a>
-    </div>
+    <div class="chain-rail" data-chain-rail></div>
   </nav>
 
   <div class="page-head">
@@ -77,6 +71,53 @@
     cam = upsample_to_input(cam, x)                       # trilinear
     return normalize_map(cam) if normalize else cam</pre>
         </div>
+        <h3>The shared code</h3>
+        <p>Every method here builds on two pieces of shared code. First, the network exposes its intermediate feature volumes, so an attribution method can tap any stage:</p>
+        <div class="codeblock">
+          <div class="cap"><span>src/gradcam_repro/model.py</span><span>RealCtCNN.forward()</span></div>
+<pre>def forward(self, x, return_features=False):
+    features = {}
+    x = self.stage1(x); features["stage1"] = x
+    x = self.stage2(x); features["stage2"] = x   # ← the CAM tap
+    x = self.stage3(x); features["stage3"] = x
+    logits = self.classifier(self.pool(x).flatten(1))
+    if return_features:
+        return logits, features
+    return logits</pre>
+        </div>
+        <p>Second, a small scaffold hooks the tapped activation (keeping its gradient), selects the class to explain, and normalises + upsamples the result. Every method calls these helpers:</p>
+        <div class="codeblock">
+          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>shared scaffold</span></div>
+<pre>TARGET_LAYER = "stage2"
+
+def _cam_forward(model, x, layer=TARGET_LAYER):
+    logits, features = model(x, return_features=True)
+    activation = features[layer]
+    activation.retain_grad()              # keep grad on a non-leaf tensor
+    return logits, activation
+
+def score_for_target(logits, target):     # the logit to explain, summed for backward()
+    target = logits.argmax(1) if target is None else target
+    return logits.gather(1, target.view(-1, 1)).sum()
+
+def upsample_to_input(heatmap, x):        # feature grid → input grid
+    return F.interpolate(heatmap, size=x.shape[-3:], mode="trilinear", align_corners=False)
+
+def normalize_map(heatmap, eps=1e-8):     # min-max each map to [0, 1]
+    flat = heatmap.flatten(1)
+    view = (heatmap.shape[0],) + (1,) * (heatmap.ndim - 1)
+    lo = flat.min(1).values.view(view); hi = flat.max(1).values.view(view)
+    return (heatmap - lo) / (hi - lo + eps)</pre>
+        </div>
+        <h3>The computation, step by step</h3>
+        <p>Below, watch Grad-CAM run end to end on a real case.</p>
+        <ol class="gotchas">
+          <li><b>A CT patch enters the network.</b> One 32×32×32 lung-CT patch, HU-normalised to [0,1]. The classifier must decide: tumour-present or not. <span class="mono">x ∈ ℝ^(1 × 32 × 32 × 32)</span></li>
+          <li><b>Forward pass → three stages, one tap.</b> The CNN stacks three conv stages — stage1 → stage2 → stage3 — each a feature volume of shrinking size. Grad-CAM taps the middle one, stage2 (16 channels at 8×8×8). <span class="mono">A = stage2(x) ∈ ℝ^(16 × 8 × 8 × 8)</span></li>
+          <li><b>Backward pass → one weight per channel.</b> A single backward pass from the target logit gives ∂yᶜ/∂Aᵏ. Average each channel's gradient over the volume → a scalar importance weight αₖ. (Computed live in the notebook.) <span class="mono">αₖᶜ = GAP( ∂yᶜ / ∂Aᵏ )</span></li>
+          <li><b>Weighted sum, ReLU, upsample.</b> Weight the channels, sum them, keep the positive part, and trilinearly upsample back to the input grid. This is the raw Grad-CAM heat-map. <span class="mono">Lᶜ = Up( ReLU( Σₖ αₖᶜ Aᵏ ) )</span></li>
+          <li><b>Overlay to localise.</b> Laid over the CT, the heat-map shows where the network's evidence for the class lives — hopefully on the lesion. Each method page scores whether it does, against the tumour mask. <span class="mono">read-out = CT ⊕ heat</span></li>
+        </ol>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
           <li><b>Gradients are global-average-pooled</b> over the whole 3D volume to get one weight per channel — the core CAM assumption that a channel's importance is spatially uniform.</li>
@@ -85,13 +126,10 @@
           <li><b><span class="mono">activation.retain_grad()</span> is mandatory</b> — <span class="mono">stage2</span> is a non-leaf tensor, so without it <span class="mono">activation.grad</span> is <span class="mono">None</span>.</li>
         </ol>
       </div>
-
-      <nav class="pager">
-        <a href="notgradcam.html"><span class="k">← Previous</span>Mean activation map</a>
-        <a class="nxt" href="guided_gradcam.html"><span class="k">Next →</span>Guided Grad-CAM</a>
-      </nav>
     </div>
   </section>
+
+  <div class="chain-foot" data-chain-foot></div>
 
   <footer>
     <div class="container">
@@ -105,5 +143,9 @@
     initBench("gradcam");
   </script>
   <script src="../js/reveal.js"></script>
+  <script type="module">
+    import { mountChainNav } from "../js/chain.js?v=1";
+    mountChainNav("methods/gradcam.html", "../");
+  </script>
 </body>
 </html>

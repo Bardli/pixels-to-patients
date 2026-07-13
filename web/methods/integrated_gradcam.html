@@ -5,18 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=6" />
+  <link rel="stylesheet" href="../styles.css?v=9" />
 </head>
 <body>
-  <nav class="nav">
+  <nav class="chain-top">
     <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
-    <div class="nav-links">
-      <a href="../network.html">Network</a>
-      <a href="../code.html">Code</a>
-      <a href="./" aria-current="page">Methods</a>
-      <a href="../reproduce.html">Reproduce</a>
-      <a href="../about.html">About</a>
-    </div>
+    <div class="chain-rail" data-chain-rail></div>
   </nav>
 
   <div class="page-head">
@@ -99,13 +93,10 @@
           <li>Combines IG's path-integration with CAM's feature-localisation.</li>
         </ol>
       </div>
-
-      <nav class="pager">
-        <a href="integrated_gradients.html"><span class="k">← Previous</span>Integrated Gradients</a>
-        <a class="nxt" href="./"><span class="k">Done →</span>All methods</a>
-      </nav>
     </div>
   </section>
+
+  <div class="chain-foot" data-chain-foot></div>
 
   <footer>
     <div class="container">
@@ -119,5 +110,9 @@
     initBench("integrated_gradcam");
   </script>
   <script src="../js/reveal.js"></script>
+  <script type="module">
+    import { mountChainNav } from "../js/chain.js?v=1";
+    mountChainNav("methods/integrated_gradcam.html", "../");
+  </script>
 </body>
 </html>
