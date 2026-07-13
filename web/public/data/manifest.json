@@ -1,6 +1,6 @@
 {
   "schema": "gradcam-repro.web-bundle.v1",
-  "generated_at": "2026-07-09T22:11:57.413945+00:00",
+  "generated_at": "2026-07-13T18:30:53.223798+00:00",
   "generated_by": "uv run gradcam-repro web-export",
   "checkpoint": {
     "path": "artifacts/real_ct/real_ct_presence_cnn_32.pt",
@@ -12,8 +12,8 @@
   },
   "uv_lock_sha256": "578ae14dddab39e92d701cb9207f06fcd1cae9c07163854a827c862a6f6095eb",
   "git": {
-    "commit": null,
-    "dirty": false
+    "commit": "5e0ed2e0c4167275dedfbc67b1e96c7e58ce758f",
+    "dirty": true
   },
   "methods": [
     "notgradcam",

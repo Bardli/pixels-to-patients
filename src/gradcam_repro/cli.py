@@ -342,6 +342,7 @@ def command_web_export(args: argparse.Namespace) -> None:
         methods=args.methods,
         device_name=args.device,
         seed=args.seed,
+        max_channels=args.max_channels,
         generated_at=generated_at,
         uv_lock=Path("uv.lock"),
     )
@@ -455,6 +456,7 @@ def build_parser() -> argparse.ArgumentParser:
     web_export_parser.add_argument("--methods", nargs="+", default=None)
     web_export_parser.add_argument("--device", default="auto")
     web_export_parser.add_argument("--seed", type=int, default=13)
+    web_export_parser.add_argument("--max-channels", type=int, default=6, help="Channels exported per layer (topk by mean); use a large value (e.g. 64) to export all.")
     web_export_parser.set_defaults(func=command_web_export)
     return parser
 

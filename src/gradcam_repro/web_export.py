@@ -154,6 +154,7 @@ def export_example(
     device: torch.device,
     out_dir: Path,
     example_id: str,
+    max_channels: int = 6,
 ) -> dict:
     root = out_dir / example_id
     (root / "attributions").mkdir(parents=True, exist_ok=True)
@@ -170,7 +171,7 @@ def export_example(
     _save_gray_png(volume_slice(sample["image"], z), root / "ct_slice.png")
     (root / "ct_slice.json").write_text(json.dumps(slice_to_payload(volume_slice(sample["image"], z))))
     _save_mask_png(volume_slice(sample["mask"], z), volume_slice(sample["image"], z), root / "mask_slice.png")
-    (root / "activations.json").write_text(json.dumps(build_activation_summary(features, sample)))
+    (root / "activations.json").write_text(json.dumps(build_activation_summary(features, sample, max_channels=max_channels)))
 
     metrics: dict[str, dict[str, float]] = {}
     for method in methods:
@@ -266,6 +267,7 @@ def web_export(
     methods: list[str] | None = None,
     device_name: str = "auto",
     seed: int = 13,
+    max_channels: int = 6,
     generated_at: str = "",
     uv_lock: Path = Path("uv.lock"),
 ) -> dict:
@@ -286,7 +288,7 @@ def web_export(
     for idx in range(len(dataset)):
         sample = dataset[idx]
         example_id = f"{idx:02d}_{sample['case_id']}"
-        meta = export_example(model, sample, methods, device, examples_dir, example_id)
+        meta = export_example(model, sample, methods, device, examples_dir, example_id, max_channels=max_channels)
         (examples_dir / example_id / "meta.json").write_text(json.dumps(meta))
         example_metas.append(meta)
 
