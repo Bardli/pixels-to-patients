@@ -538,3 +538,30 @@ footer a.link:hover { color: var(--accent); }
 /* prefers-reduced-motion: reduce is handled by the universal `*` rule
    above (~line 224), which already zeroes transition on every selector
    here, including .chain-step / .cs-dot / .chain-next hover states. */
+
+/* ============================================================ MATH LEGEND
+   "where:" symbol glossary shown under each method's formula. Every symbol
+   in a .mathblock gets a plain-language definition in a .math-where list. */
+.math-where {
+  list-style: none; margin: 0.7rem 0 0; padding: 0.85rem 1.1rem 0.95rem;
+  border-left: 2px solid var(--accent-2); background: var(--bg-tint);
+  border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 0.45rem;
+}
+.math-where::before {
+  content: "where"; font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint);
+}
+.math-where li { font-size: 0.9rem; line-height: 1.55; color: var(--ink-dim); }
+.math-where li b { font-family: var(--mono); font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+/* Interactive symbols: a .mathblock symbol and its legend entry share a
+   data-sym; hover/focus either to cross-highlight (see js/mathlegend.js). */
+.mathblock .sym {
+  cursor: help; border-radius: 3px; padding: 0 0.14em;
+  border-bottom: 1px dotted currentColor; transition: background .12s, color .12s;
+}
+.mathblock .sym:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mathblock .sym.sym-hot { background: var(--accent); color: #fff; border-bottom-color: transparent; }
+.math-where li[data-sym] { cursor: help; border-radius: var(--radius); transition: background .12s; margin: -0.1rem -0.35rem; padding: 0.1rem 0.35rem; }
+.math-where li.sym-hot { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.math-where li.sym-hot b { background: var(--accent); color: #fff; }

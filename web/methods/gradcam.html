@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=9" />
+  <link rel="stylesheet" href="../styles.css?v=11" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,10 +52,21 @@
         <p>Grad-CAM asks one question of a trained network: <em>which feature-map channels mattered for this class, and where were they active?</em> It answers with a single backward pass.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          α<sub>k</sub><sup>c</sup> = GAP( ∂y<sup>c</sup> / ∂A<sup>k</sup> )   &nbsp;— average-pool the gradient over the volume<br>
-          L<sup>c</sup> = ReLU( Σ<sub>k</sub> α<sub>k</sub><sup>c</sup> · A<sup>k</sup> )   &nbsp;— weighted sum of channels, keep positive<br>
-          heat = trilinear-upsample( L<sup>c</sup> → input size )
+          <span class="sym" data-sym="alpha">α<sub>k</sub><sup>c</sup></span> = <span class="sym" data-sym="gap">GAP</span>( <span class="sym" data-sym="grad">∂y<sup>c</sup> / ∂A<sup>k</sup></span> )   &nbsp;— average-pool the gradient over the volume<br>
+          <span class="sym" data-sym="L">L<sup>c</sup></span> = <span class="sym" data-sym="relu">ReLU</span>( <span class="sym" data-sym="sum">Σ<sub>k</sub></span> <span class="sym" data-sym="alpha">α<sub>k</sub><sup>c</sup></span> · <span class="sym" data-sym="A">A<sup>k</sup></span> )   &nbsp;— weighted sum of channels, keep positive<br>
+          heat = <span class="sym" data-sym="up">trilinear-upsample</span>( <span class="sym" data-sym="L">L<sup>c</sup></span> → input size )
         </div>
+        <ul class="math-where">
+          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap (16 channels)</li>
+          <li data-sym="grad"><b>y<sup>c</sup></b> — the network's raw score (logit) for the target class <b>c</b> (tumour-present vs. not)</li>
+          <li data-sym="grad"><b>∂y<sup>c</sup>/∂A<sup>k</sup></b> — gradient of that score w.r.t. channel <b>k</b>: how much each voxel of the channel moves the score</li>
+          <li data-sym="gap"><b>GAP</b> — global-average pool: average over the whole D×H×W volume, giving one number per channel</li>
+          <li data-sym="alpha"><b>α<sub>k</sub><sup>c</sup></b> — the resulting weight for channel <b>k</b>: how important it is for class <b>c</b></li>
+          <li data-sym="sum"><b>Σ<sub>k</sub></b> — sum over all channels <b>k</b></li>
+          <li data-sym="relu"><b>ReLU</b> — keep positives, zero the rest (only evidence <em>for</em> the class)</li>
+          <li data-sym="L"><b>L<sup>c</sup></b> — the low-resolution class-<b>c</b> localization map (the raw CAM)</li>
+          <li data-sym="up"><b>trilinear-upsample</b> — resize <b>L<sup>c</sup></b> from the feature grid back up to the input volume size</li>
+        </ul>
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. The CAM is tapped at <span class="mono">stage2</span>, a 16-channel feature volume.</p>
         <div class="codeblock">
@@ -145,7 +156,9 @@ def normalize_map(heatmap, eps=1e-8):     # min-max each map to [0, 1]
   <script src="../js/reveal.js"></script>
   <script type="module">
     import { mountChainNav } from "../js/chain.js?v=1";
+    import { wireMathLegend } from "../js/mathlegend.js?v=1";
     mountChainNav("methods/gradcam.html", "../");
+    wireMathLegend();
   </script>
 </body>
 </html>
