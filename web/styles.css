@@ -454,3 +454,87 @@ footer a.link:hover { color: var(--accent); }
 .viewer.gt { cursor: default; }
 .viewer.gt img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
 @media (max-width: 620px) { .viewer-pair { grid-template-columns: 1fr; } }
+
+/* ============================================================ CHAIN NAV
+   Shared linear reading-order nav (web/js/chain.js). A slim sticky top
+   rail replaces .nav on chain-migrated pages, showing all 10 steps as
+   dot+micro-label with done/current state. A bottom Prev/Next echoes the
+   old .pager (quiet prev, mono kicker-over-label) but promotes Next to a
+   .btn.primary-style CTA. mountChainNav() only injects into
+   [data-chain-rail] / [data-chain-foot]; markup below styles that output. */
+.chain-top {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.6rem var(--gutter);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+  border-bottom: 1px solid var(--line);
+}
+.chain-top .brand { flex: none; }
+
+.chain-rail {
+  display: flex; align-items: center; gap: 0.1rem;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.chain-rail::-webkit-scrollbar { display: none; }
+
+.chain-step {
+  display: inline-flex; align-items: center; gap: 0.4rem; flex: none;
+  padding: 0.35rem 0.5rem; border-radius: var(--radius);
+  white-space: nowrap; transition: background .15s;
+}
+.chain-step:hover { background: var(--bg-tint); }
+.cs-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--line); box-shadow: 0 0 0 1px var(--line) inset;
+  transition: background .2s, box-shadow .2s, transform .2s;
+}
+.cs-lab {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-faint); transition: color .15s;
+}
+.chain-step.done .cs-dot { background: var(--ink-dim); box-shadow: none; }
+.chain-step.done .cs-lab { color: var(--ink-dim); }
+.chain-step.current .cs-dot {
+  background: var(--accent); transform: scale(1.2);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 8px -1px var(--accent);
+}
+.chain-step.current .cs-lab { color: var(--ink); font-weight: 600; }
+
+/* ---- bottom Prev / Next ---- */
+.chain-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  margin-top: 3rem; padding-top: 1.4rem; border-top: 1px solid var(--line);
+}
+.chain-prev, .chain-prev-spacer { flex: none; }
+.chain-prev {
+  font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.02em;
+  color: var(--ink-dim); padding: 0.6rem 0.2rem; transition: color .15s;
+}
+.chain-prev:hover { color: var(--accent); }
+.chain-end {
+  flex: none; padding: 0.6rem 0.2rem; text-align: right;
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.chain-next {
+  display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.12rem;
+  flex: none; font-family: var(--mono); font-weight: 600;
+  font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.62rem 1.05rem; border-radius: var(--radius);
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  transition: transform .15s, filter .15s;
+}
+.chain-next:hover { transform: translateY(-2px); filter: brightness(1.06); background: var(--accent); color: #fff; }
+.chain-next .cn-k { font-size: 0.6rem; letter-spacing: 0.14em; font-weight: 500; color: rgba(255,255,255,0.78); }
+
+@media (max-width: 640px) {
+  .cs-lab { display: none; }
+  .chain-step { padding: 0.35rem 0.3rem; gap: 0; }
+  .chain-rail { gap: 0; }
+}
+/* prefers-reduced-motion: reduce is handled by the universal `*` rule
+   above (~line 224), which already zeroes transition on every selector
+   here, including .chain-step / .cs-dot / .chain-next hover states. */
