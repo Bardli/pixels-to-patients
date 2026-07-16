@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Compare — Grad-CAM on CT</title>
   <meta name="description" content="All seven attribution methods run on one lung-CT case, scored against the ground-truth tumour mask and ranked by measured overlap — because a saliency map cannot be judged by eye." />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=13" />
   <style>
     /* Page-specific layout only — every color/component reused from styles.css
        (.scan, .cmp, .viewer, .scorecard, .metric, .badge). Not worth promoting
@@ -51,6 +51,14 @@
       <div class="cmp-grid" id="grid" role="list" aria-label="Seven attribution methods, ranked by share of heat inside the tumour mask"></div>
 
       <p class="figcap" id="rank-cap" style="max-width:64ch; margin-top:1.8rem">&nbsp;</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="sec-head reveal"><span class="num">▸</span><h2>Check your understanding</h2><span class="rule"></span></div>
+      <p class="intuition reveal" style="max-width:60ch; margin-bottom:0.2rem">Five questions on the ideas in this tour — pick an answer to see why.</p>
+      <div class="quiz reveal" id="quiz"></div>
     </div>
   </section>
 
@@ -115,6 +123,74 @@
     });
   </script>
   <script src="js/reveal.js"></script>
+  <script>
+    // Comprehension quiz — self-contained; answers verified against src/attribution.py + the exported metrics.
+    const QUIZ = [
+      { q: "Two saliency maps for the same tumour: map A looks sharp and focused, map B looks blurry. Which should you trust more?",
+        options: ["A — a sharper map is more accurate", "B — blur captures more context", "Neither by eye — measure each against the ground-truth mask"],
+        answer: 2,
+        explain: "The core lesson of this tour: visual conviction is not correctness. Only measuring overlap with the tumour mask tells you which map actually localises the lesion." },
+      { q: "Occlusion sensitivity blanks a small cube in the scan and measures the drop in class probability. What should the cube be filled with?",
+        options: ["Zeros (black)", "The per-volume mean intensity", "Random noise"],
+        answer: 1,
+        explain: "Filling with zero injects a fake high-contrast edge the network reacts to — an artifact, not evidence. The per-volume mean keeps the perturbation neutral." },
+      { q: "At the stage2 CAM tap the network has 16 feature channels. For the example lung patch, roughly how many actually fire?",
+        options: ["All 16", "About 10", "About 3 — the rest are all-zero after ReLU"],
+        answer: 2,
+        explain: "After the ReLU, filters that don't respond to this patch output zeros. Only ~3 channels carry signal, which is why the mean-activation map is dominated by them." },
+      { q: "Integrated Gradients had the highest mass-in-GT (33.5%) on the example case, yet its hottest voxel missed the tumour (pointing = miss). What does that show?",
+        options: ["Different metrics can disagree — “best” depends on what you measure", "The metric is broken", "Integrated Gradients is always the best method"],
+        answer: 0,
+        explain: "A method can win on one metric and fail another. That is exactly why the tour reports three metrics instead of trusting a single number." },
+      { q: "The mean-activation-map baseline ignores the target class entirely. What can it therefore NOT do?",
+        options: ["Tell one class apart from another — its map is identical for every class", "Produce a heat-map at all", "Run without gradients"],
+        answer: 0,
+        explain: "No class signal in, so the map is class-agnostic: it shows where the network is active, not where for THIS class. Adding the class gradient is what makes Grad-CAM class-discriminative." },
+    ];
+    (function () {
+      const mount = document.getElementById("quiz");
+      if (!mount) return;
+      let score = 0, answered = 0;
+      const scoreEl = document.createElement("div");
+      scoreEl.className = "quiz-score";
+      scoreEl.textContent = `0 / ${QUIZ.length}`;
+      QUIZ.forEach((item, qi) => {
+        const card = document.createElement("div");
+        card.className = "quiz-q";
+        const stem = document.createElement("p");
+        stem.className = "quiz-stem";
+        stem.innerHTML = `<span class="quiz-n">${qi + 1}</span><span>${item.q}</span>`;
+        card.appendChild(stem);
+        const opts = document.createElement("div");
+        opts.className = "quiz-opts";
+        item.options.forEach((opt, oi) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "quiz-opt";
+          b.textContent = opt;
+          b.addEventListener("click", () => {
+            if (card.classList.contains("done")) return;
+            card.classList.add("done");
+            answered++;
+            const right = oi === item.answer;
+            if (right) score++;
+            b.classList.add(right ? "correct" : "wrong");
+            if (!right) opts.children[item.answer].classList.add("correct");
+            const ex = document.createElement("p");
+            ex.className = "quiz-explain";
+            ex.innerHTML = `<b>${right ? "Correct." : "Not quite."}</b> ${item.explain}`;
+            card.appendChild(ex);
+            scoreEl.textContent = `${score} / ${QUIZ.length}`;
+            if (answered === QUIZ.length) scoreEl.classList.add("complete");
+          });
+          opts.appendChild(b);
+        });
+        card.appendChild(opts);
+        mount.appendChild(card);
+      });
+      mount.appendChild(scoreEl);
+    })();
+  </script>
   <script type="module">
     import { mountChainNav } from "./js/chain.js?v=1";
     mountChainNav("compare.html", "");

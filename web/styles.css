@@ -576,3 +576,23 @@ footer a.link:hover { color: var(--accent); }
 .chan-ph { display: flex; align-items: center; justify-content: center; background: #0c0d10; border-style: dashed; color: var(--ink-faint); font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase; }
 .chan-lab { font-family: var(--mono); font-size: 0.56rem; color: var(--ink-faint); }
 .chan-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; background: #0c0d10; border: 1px dashed var(--line); }
+
+/* ============================================================ QUIZ
+   Self-contained comprehension check at the end of compare.html. Click an
+   option to lock the question, reveal correct/wrong + an explanation, tally score. */
+.quiz { display: grid; gap: 1.1rem; margin-top: 1.4rem; }
+.quiz-q { border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; background: var(--bg); }
+.quiz-stem { font-size: 1rem; line-height: 1.5; margin: 0 0 0.85rem; display: flex; gap: 0.6rem; }
+.quiz-n { flex: none; font-family: var(--mono); font-size: 0.68rem; font-weight: 600; color: #fff; background: var(--ink-dim); width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.quiz-opts { display: grid; gap: 0.5rem; }
+.quiz-opt { text-align: left; font-size: 0.92rem; line-height: 1.4; padding: 0.6rem 0.85rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s; }
+.quiz-opt:hover { border-color: var(--ink-dim); background: var(--bg-tint); }
+.quiz-q.done .quiz-opt { cursor: default; }
+.quiz-q.done .quiz-opt:hover { background: var(--bg); border-color: var(--line); }
+.quiz-q.done .quiz-opt.correct:hover { border-color: #2e7d32; }
+.quiz-opt.correct { border-color: #2e7d32; background: color-mix(in srgb, #2e7d32 13%, transparent); font-weight: 500; }
+.quiz-opt.wrong { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.quiz-explain { font-size: 0.9rem; line-height: 1.55; color: var(--ink-dim); margin: 0.85rem 0 0; padding-top: 0.7rem; border-top: 1px dashed var(--line); }
+.quiz-explain b { color: var(--ink); }
+.quiz-score { justify-self: end; font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); padding: 0.5rem 0.2rem 0; }
+.quiz-score.complete { color: var(--accent); font-weight: 600; }
