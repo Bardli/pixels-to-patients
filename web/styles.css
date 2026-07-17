@@ -557,9 +557,13 @@ footer a.link:hover { color: var(--accent); }
 /* Interactive symbols: a .mathblock symbol and its legend entry share a
    data-sym; hover/focus either to cross-highlight (see js/mathlegend.js). */
 .mathblock .sym {
-  cursor: help; border-radius: 3px; padding: 0 0.14em;
-  border-bottom: 1px dotted currentColor; transition: background .12s, color .12s;
+  cursor: help; border-radius: 3px; padding: 0 0.08em;
+  transition: background .12s, color .12s;
 }
+/* MathML display: real typeset formulas (fraction bars, ∑/∫ limits, indices). */
+.mathblock .math-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.2rem; margin: 0.45rem 0; }
+.mathblock math { font-size: 1.35rem; color: var(--ink); }
+.math-gloss { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
 .mathblock .sym:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mathblock .sym.sym-hot { background: var(--accent); color: #fff; border-bottom-color: transparent; }
 .math-where li[data-sym] { cursor: help; border-radius: var(--radius); transition: background .12s; margin: -0.1rem -0.35rem; padding: 0.1rem 0.35rem; }

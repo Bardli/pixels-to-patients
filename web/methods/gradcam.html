@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,9 +52,42 @@
         <p>Grad-CAM asks one question of a trained network: <em>which feature-map channels mattered for this class, and where were they active?</em> It answers with a single backward pass.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="alpha">α<sub>k</sub><sup>c</sup></span> = <span class="sym" data-sym="gap">GAP</span>( <span class="sym" data-sym="grad">∂y<sup>c</sup> / ∂A<sup>k</sup></span> )   &nbsp;— average-pool the gradient over the volume<br>
-          <span class="sym" data-sym="L">L<sup>c</sup></span> = <span class="sym" data-sym="relu">ReLU</span>( <span class="sym" data-sym="sum">Σ<sub>k</sub></span> <span class="sym" data-sym="alpha">α<sub>k</sub><sup>c</sup></span> · <span class="sym" data-sym="A">A<sup>k</sup></span> )   &nbsp;— weighted sum of channels, keep positive<br>
-          heat = <span class="sym" data-sym="up">trilinear-upsample</span>( <span class="sym" data-sym="L">L<sup>c</sup></span> → input size )
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="alpha"><msubsup><mi>α</mi><mi>k</mi><mi>c</mi></msubsup></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="gap"><mi>GAP</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="grad"><mfrac><mrow><mo>∂</mo><msup><mi>y</mi><mi>c</mi></msup></mrow><mrow><mo>∂</mo><msup><mi>A</mi><mi>k</mi></msup></mrow></mfrac></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">average-pool the gradient over the volume</span>
+          </div>
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="L"><msup><mi>L</mi><mi>c</mi></msup></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="relu"><mi>ReLU</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="sum"><munder><mo>∑</mo><mi>k</mi></munder></mrow>
+              <mrow class="sym" data-sym="alpha"><msubsup><mi>α</mi><mi>k</mi><mi>c</mi></msubsup></mrow>
+              <mo>&#8290;</mo>
+              <mrow class="sym" data-sym="A"><msup><mi>A</mi><mi>k</mi></msup></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">weighted sum of channels, keep the positive part</span>
+          </div>
+          <div class="math-line">
+            <math display="block">
+              <mi>heat</mi>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="up"><mtext>trilinear&#8209;upsample</mtext></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="L"><msup><mi>L</mi><mi>c</mi></msup></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">upsample back to the input volume</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap (16 channels)</li>
