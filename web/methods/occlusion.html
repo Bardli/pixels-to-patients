@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Occlusion Sensitivity — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,7 +52,21 @@
         <p>Occlusion sensitivity uses no gradients at all. It treats the network as a black box: blank out a region of the input, measure how far the tumour probability falls, and map that drop back onto the volume.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="H">H(p)</span> = <span class="sym" data-sym="max">max</span>(0, <span class="sym" data-sym="pcx">P(c | x)</span> − <span class="sym" data-sym="pblank">P(c | x with a cube blanked at p)</span> )
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="H"><mi>H</mi><mo fence="true" stretchy="false">(</mo><mi>p</mi><mo fence="true" stretchy="false">)</mo></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="max"><mi>max</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mn>0</mn>
+              <mo>,</mo>
+              <mrow class="sym" data-sym="pcx"><mi>P</mi><mo fence="true" stretchy="false">(</mo><mi>c</mi><mo>|</mo><mi>x</mi><mo fence="true" stretchy="false">)</mo></mrow>
+              <mo>−</mo>
+              <mrow class="sym" data-sym="pblank"><mi>P</mi><mo fence="true" stretchy="false">(</mo><mi>c</mi><mo>|</mo><mtext>x blanked at p</mtext><mo fence="true" stretchy="false">)</mo></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">probability drop when a cube is blanked</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="H"><b>H(p)</b> — the heat at voxel position <b>p</b>: how much blanking <b>p</b> hurts the class score</li>

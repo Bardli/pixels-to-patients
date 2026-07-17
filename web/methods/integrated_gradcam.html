@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,8 +52,36 @@
         <p>Integrated Grad-CAM moves Integrated Gradients into feature space: it path-integrates the gradients with respect to the CAM-layer activations, weighted by how far those activations moved from a baseline.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="igc">IGC</span> = <span class="sym" data-sym="norm">normalize</span>( <span class="sym" data-sym="norm">Up</span>( <span class="sym" data-sym="abs">|</span> <span class="sym" data-sym="delta">ΔA</span> <span class="sym" data-sym="hadamard">⊙</span> <span class="sym" data-sym="avg">(1/steps) Σ<sub>α</sub></span> <span class="sym" data-sym="grad">∂y<sup>c</sup>/∂A(x<sub>α</sub>)</span> <span class="sym" data-sym="abs">|</span> ) )<br>
-          <span class="sym" data-sym="delta">ΔA</span> = A(x) − A(baseline)
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="igc"><mi>IGC</mi></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="norm"><mi>normalize</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="norm"><mi>Up</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="abs"><mo>|</mo></mrow>
+              <mrow class="sym" data-sym="delta"><mi>ΔA</mi></mrow>
+              <mrow class="sym" data-sym="hadamard"><mo>⊙</mo></mrow>
+              <mrow class="sym" data-sym="avg"><mfrac><mn>1</mn><mi>steps</mi></mfrac><munder><mo>∑</mo><mi>α</mi></munder></mrow>
+              <mspace width="0.1667em"></mspace>
+              <mrow class="sym" data-sym="grad"><mfrac><mrow><mo>∂</mo><msup><mi>y</mi><mi>c</mi></msup></mrow><mrow><mo>∂</mo><mi>A</mi></mrow></mfrac><mo fence="true" stretchy="false">(</mo><msub><mi>x</mi><mi>α</mi></msub><mo fence="true" stretchy="false">)</mo></mrow>
+              <mrow class="sym" data-sym="abs"><mo>|</mo></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">path-integrated feature gradients × the feature change</span>
+          </div>
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="delta"><mi>ΔA</mi></mrow>
+              <mo>=</mo>
+              <mi>A</mi><mo fence="true" stretchy="false">(</mo><mi>x</mi><mo fence="true" stretchy="false">)</mo>
+              <mo>−</mo>
+              <mi>A</mi><mo fence="true" stretchy="false">(</mo><mtext>baseline</mtext><mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">feature change from the mean baseline</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="igc"><b>IGC</b> — the Integrated Grad-CAM map</li>

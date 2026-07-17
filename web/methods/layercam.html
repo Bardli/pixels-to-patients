@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LayerCAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,7 +52,23 @@
         <p>LayerCAM keeps Grad-CAM's idea but weights each activation by its own positive gradient <em>at that location</em>, giving spatially-varying weights instead of one weight per channel.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="L">L</span> = <span class="sym" data-sym="relu">ReLU</span>( <span class="sym" data-sym="sum">Σ<sub>k</sub></span> <span class="sym" data-sym="relu">ReLU</span>(<span class="sym" data-sym="grad">∂y<sup>c</sup>/∂A<sup>k</sup></span>) <span class="sym" data-sym="hadamard">⊙</span> <span class="sym" data-sym="A">A<sup>k</sup></span> )
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="L"><mi>L</mi></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="relu"><mi>ReLU</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="sum"><munder><mo>∑</mo><mi>k</mi></munder></mrow>
+              <mrow class="sym" data-sym="relu"><mi>ReLU</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="grad"><mfrac><mrow><mo>∂</mo><msup><mi>y</mi><mi>c</mi></msup></mrow><mrow><mo>∂</mo><msup><mi>A</mi><mi>k</mi></msup></mrow></mfrac></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+              <mrow class="sym" data-sym="hadamard"><mo>⊙</mo></mrow>
+              <mrow class="sym" data-sym="A"><msup><mi>A</mi><mi>k</mi></msup></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">per-voxel positive gradients weight each channel</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="L"><b>L</b> — the LayerCAM map</li>

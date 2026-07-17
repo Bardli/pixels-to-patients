@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guided Grad-CAM — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,7 +52,21 @@
         <p>Guided Grad-CAM sharpens Grad-CAM's coarse localisation with guided backpropagation's high-resolution edges — combining <em>where</em> (Grad-CAM) with <em>what</em> (guided backprop).</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="ggc">GGC</span> = <span class="sym" data-sym="norm">normalize</span>( <span class="sym" data-sym="abs">|</span> <span class="sym" data-sym="gbp">GuidedBP(x,c)</span> <span class="sym" data-sym="hadamard">⊙</span> <span class="sym" data-sym="upgc">Up(Grad-CAM<sup>c</sup>)</span> <span class="sym" data-sym="abs">|</span> )
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="ggc"><mi>GGC</mi></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="norm"><mi>normalize</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="abs"><mo>|</mo></mrow>
+              <mrow class="sym" data-sym="gbp"><mi>GuidedBP</mi><mo fence="true" stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>c</mi><mo fence="true" stretchy="false">)</mo></mrow>
+              <mrow class="sym" data-sym="hadamard"><mo>⊙</mo></mrow>
+              <mrow class="sym" data-sym="upgc"><mi>Up</mi><mo fence="true" stretchy="false">(</mo><msup><mtext>Grad-CAM</mtext><mi>c</mi></msup><mo fence="true" stretchy="false">)</mo></mrow>
+              <mrow class="sym" data-sym="abs"><mo>|</mo></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">sharp guided-backprop edges × the Grad-CAM map</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="ggc"><b>GGC</b> — the Guided Grad-CAM map</li>

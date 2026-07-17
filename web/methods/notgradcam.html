@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mean activation map — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=12" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -61,7 +61,20 @@
         <p>The mean activation map is the honest baseline: no gradients and no target class — just the mean of the feature-map channels at the tap layer, upsampled. It shows what the network is active on, before any class-discriminative signal is added.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="M">M(x)</span> = <span class="sym" data-sym="up">Up</span>( <span class="sym" data-sym="mean">(1/K) Σ<sub>k</sub></span> <span class="sym" data-sym="A">A<sup>k</sup></span>(x) )   &nbsp;— mean over channels, then upsample
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="M"><mi>M</mi><mo fence="true" stretchy="false">(</mo><mi>x</mi><mo fence="true" stretchy="false">)</mo></mrow>
+              <mo>=</mo>
+              <mrow class="sym" data-sym="up"><mi>Up</mi></mrow>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="mean"><mfrac><mn>1</mn><mi>K</mi></mfrac><munder><mo>∑</mo><mi>k</mi></munder></mrow>
+              <mspace width="0.1667em"></mspace>
+              <mrow class="sym" data-sym="A"><msup><mi>A</mi><mi>k</mi></msup></mrow>
+              <mo fence="true" stretchy="false">(</mo><mi>x</mi><mo fence="true" stretchy="false">)</mo>
+              <mo fence="true" stretchy="false">)</mo>
+            </math>
+            <span class="math-gloss">mean over channels, then upsample</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="M"><b>M(x)</b> — the saliency map produced for the input volume <b>x</b></li>

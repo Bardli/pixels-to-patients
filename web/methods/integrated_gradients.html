@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Gradients — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=11" />
+  <link rel="stylesheet" href="../styles.css?v=14" />
 </head>
 <body>
   <nav class="chain-top">
@@ -52,7 +52,38 @@
         <p>Integrated Gradients works in input space: it integrates the gradient of the target logit along a straight path from a baseline to the real scan, and satisfies the completeness axiom.</p>
         <h3>The math</h3>
         <div class="mathblock">
-          <span class="sym" data-sym="ig">IG<sub>i</sub>(x)</span> = (<span class="sym" data-sym="xi">x<sub>i</sub></span> − <span class="sym" data-sym="baseline">x'<sub>i</sub></span>) · <span class="sym" data-sym="integral">∫₀¹</span> <span class="sym" data-sym="grad">∂y<sup>c</sup>(x' + </span><span class="sym" data-sym="alpha">α</span><span class="sym" data-sym="grad">(x − x')) / ∂</span><span class="sym" data-sym="xi">x<sub>i</sub></span> <span class="sym" data-sym="integral">dα</span>   &nbsp;≈&nbsp; <span class="sym" data-sym="riemann">Riemann sum</span> over <span class="mono">steps</span>
+          <div class="math-line">
+            <math display="block">
+              <mrow class="sym" data-sym="ig"><msub><mi>IG</mi><mi>i</mi></msub><mo fence="true" stretchy="false">(</mo><mi>x</mi><mo fence="true" stretchy="false">)</mo></mrow>
+              <mo>=</mo>
+              <mo fence="true" stretchy="false">(</mo>
+              <mrow class="sym" data-sym="xi"><msub><mi>x</mi><mi>i</mi></msub></mrow>
+              <mo>−</mo>
+              <mrow class="sym" data-sym="baseline"><msub><mrow><mi>x</mi><mo>′</mo></mrow><mi>i</mi></msub></mrow>
+              <mo fence="true" stretchy="false">)</mo>
+              <mo>·</mo>
+              <mrow class="sym" data-sym="integral"><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup></mrow>
+              <mrow class="sym" data-sym="grad">
+                <mfrac>
+                  <mrow><mo>∂</mo><msup><mi>y</mi><mi>c</mi></msup><mo fence="true" stretchy="false">(</mo><mrow><mi>x</mi><mo>′</mo></mrow><mo>+</mo><mrow class="sym" data-sym="alpha"><mi>α</mi></mrow><mo>&#8290;</mo><mo fence="true" stretchy="false">(</mo><mi>x</mi><mo>−</mo><mrow><mi>x</mi><mo>′</mo></mrow><mo fence="true" stretchy="false">)</mo><mo fence="true" stretchy="false">)</mo></mrow>
+                  <mrow><mo>∂</mo><mrow class="sym" data-sym="xi"><msub><mi>x</mi><mi>i</mi></msub></mrow></mrow>
+                </mfrac>
+              </mrow>
+              <mrow class="sym" data-sym="integral"><mo>d</mo><mi>α</mi></mrow>
+            </math>
+            <span class="math-gloss">integrate input gradients along a path from a zero baseline</span>
+          </div>
+          <div class="math-line">
+            <math display="block">
+              <mo>≈</mo>
+              <mrow class="sym" data-sym="riemann"><mtext>Riemann sum</mtext></mrow>
+              <mspace width="0.1667em"></mspace>
+              <mtext>over</mtext>
+              <mspace width="0.1667em"></mspace>
+              <mi>steps</mi>
+            </math>
+            <span class="math-gloss">50-step discrete approximation</span>
+          </div>
         </div>
         <ul class="math-where">
           <li data-sym="ig"><b>IG<sub>i</sub>(x)</b> — the attribution assigned to input voxel <b>i</b></li>
