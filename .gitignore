@@ -23,3 +23,9 @@ deck/.artifact-tool/
 # Local tooling / editor / agent state
 .claude/
 .vscode/
+
+# Vendored upstream (JSC / nnUNet fork), pinned commit recorded in artifacts manifest
+third_party/
+
+# Agent session state (same class as .claude/)
+.superpowers/
