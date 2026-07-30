@@ -570,20 +570,46 @@ footer a.link:hover { color: var(--accent); }
 .math-where li.sym-hot { background: color-mix(in srgb, var(--accent) 13%, transparent); }
 .math-where li.sym-hot b { background: var(--accent); color: #fff; }
 
-/* ============================================================ CHANNEL GRID
-   notgradcam: all feature-map channels being averaged; silent (all-zero,
-   post-ReLU) channels are shown as dashed placeholders to make sparsity visible. */
-.chan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 0.6rem; margin-top: 1.4rem; }
-.chan-cell { display: flex; flex-direction: column; gap: 0.3rem; align-items: center; }
-.chan-cell canvas, .chan-ph { width: 100%; aspect-ratio: 1 / 1; border-radius: 3px; border: 1px solid var(--line-dk); image-rendering: pixelated; }
-.chan-cell.silent { opacity: 0.7; }
-/* Channels without an exported slice: a compact mean chip, so the full set
-   being averaged stays visible without shipping hundreds of slice payloads. */
-.chan-cell.chip .chan-ph { border-style: solid; background: #10131a; color: var(--ink-dim); font-size: 0.58rem; letter-spacing: 0.04em; text-transform: none; }
-.chan-grid { max-height: 30rem; overflow-y: auto; padding-right: 0.3rem; }
-.chan-ph { display: flex; align-items: center; justify-content: center; background: #0c0d10; border-style: dashed; color: var(--ink-faint); font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase; }
-.chan-lab { font-family: var(--mono); font-size: 0.56rem; color: var(--ink-faint); }
-.chan-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; background: #0c0d10; border: 1px dashed var(--line); }
+/* ==================================================== CHANNEL DISTRIBUTION
+   notgradcam: the distribution of mean activation over every channel at the CAM
+   tap. Replaced a 640-tile grid whose 634 slice-less tiles were dark text-only
+   chips — they filled the section without answering what it asks.
+   Single series, single hue (--accent: validated >= 3:1 on --bg and above the
+   chroma floor), so no legend; the two modes are direct-labelled instead. */
+.chandist { position: relative; margin-top: 1.4rem; }
+.chandist-svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.cd-bar { fill: var(--accent); }
+/* Focus+context on hover: the group recedes, the hovered bar stays full strength. */
+.cd-bars:hover .cd-bar { fill: color-mix(in srgb, var(--accent) 34%, var(--bg)); }
+.cd-bars .cd-bar:hover { fill: var(--accent); }
+
+.cd-grid line { stroke: var(--line); stroke-width: 1; }
+.cd-base { stroke: var(--ink-faint); stroke-width: 1; fill: none; }
+.cd-break { stroke: var(--ink-faint); stroke-width: 1; fill: none; }
+.cd-leader { stroke: var(--line); stroke-width: 1; }
+.cd-tick { font-family: var(--mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+.cd-tick-y { text-anchor: end; }
+.cd-axis-title { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; fill: var(--ink-faint); text-anchor: start; }
+.cd-axis-x { text-anchor: middle; }
+/* Direct labels carry identity, so text keeps ink tokens — never the series colour. */
+.cd-note { font-family: var(--mono); font-size: 10px; fill: var(--ink-dim); }
+
+.cd-tip {
+  position: absolute; pointer-events: none; z-index: 4;
+  transform: translate(-50%, -140%);
+  background: var(--ink); color: var(--bg);
+  padding: 0.3rem 0.5rem; border-radius: 4px;
+  font-family: var(--mono); font-size: 0.66rem; line-height: 1.35; white-space: nowrap;
+}
+.cd-tip span { color: color-mix(in srgb, var(--bg) 68%, var(--ink)); }
+
+.cd-table { margin-top: 0.9rem; font-family: var(--mono); font-size: 0.68rem; }
+.cd-table summary { cursor: pointer; color: var(--ink-faint); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.62rem; }
+.cd-table table { border-collapse: collapse; margin-top: 0.6rem; }
+.cd-table th, .cd-table td { text-align: right; padding: 0.16rem 0.9rem 0.16rem 0; color: var(--ink-dim); }
+.cd-table th { color: var(--ink-faint); font-weight: 400; border-bottom: 1px solid var(--line); }
+.cd-table td:first-child, .cd-table th:first-child { text-align: left; }
 
 /* ============================================================ QUIZ
    Self-contained comprehension check at the end of compare.html. Click an

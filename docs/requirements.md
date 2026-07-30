@@ -54,7 +54,7 @@
 
 ## 6. Deployment
 
-- **R6.1** — Hosted on **GitHub Pages** from a **public** repo (`github.com/Bardli/gradcam-repro`), deployed by a **GitHub Actions workflow** that publishes `web/` on every push to `main`. Live at `https://bardli.github.io/gradcam-repro/`.
+- **R6.1** — Hosted on **GitHub Pages** from a **public** repo (`github.com/Bardli/pixels-to-patients`), deployed by a **GitHub Actions workflow** that publishes `web/` on every push to `main`. Live at `https://bardli.github.io/pixels-to-patients/`.
 - **R6.2** — The full repository is the public reproducible artifact (large data / checkpoints stay gitignored).
 
 ## 7. Open follow-ups (backlog)

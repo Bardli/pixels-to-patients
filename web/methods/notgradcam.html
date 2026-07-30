@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mean activation map — Grad-CAM on CT</title>
   <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=14" />
+  <link rel="stylesheet" href="../styles.css?v=16" />
 </head>
 <body>
   <nav class="chain-top">
@@ -48,10 +48,10 @@
   <section>
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The channels being averaged</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:66ch">All <b id="chan-total">—</b> feature-map channels at the <span class="mono">conv_block</span> CAM tap for case <span class="mono">203125_1</span> — the exact tensors this baseline averages, ordered by mean activation. The six with the highest mean are rendered as slices; the rest are shown as their mean, and any channel that is entirely zero is marked <em>silent</em>.</p>
-      <p class="intuition reveal" style="max-width:66ch; margin-top:0.8rem"><b>And here is the surprise.</b> On a small toy CNN almost every channel goes silent — a filter that doesn't respond outputs all zeros after the ReLU. A real trained backbone does the opposite: <b id="chan-active">—</b> of <span id="chan-total2" class="mono">640</span> channels carry signal here. The sparsity is real but it lives at the <em>voxel</em> level, not the channel level — <b id="chan-zero">—</b> of the individual activations in this tensor are exactly zero. That is precisely why averaging is a weak localiser: mean over hundreds of busy channels dilutes the class-specific signal into the anatomy that is merely <em>present</em>.</p>
-      <div class="chan-grid reveal" id="channels-mount"></div>
-      <p class="figcap reveal">Each tile is one channel's <span class="mono">conv_block</span> feature slice (turbo, per-channel contrast-stretched), labelled <span class="mono">ch · mean</span>. <span class="chan-dot"></span> = silent (all-zero). The mean map is <em>every</em> channel averaged and upsampled — which is why it tracks anatomy that is merely present rather than evidence for the class.</p>
+      <p class="intuition reveal" style="max-width:66ch">All <b id="chan-total">—</b> feature-map channels at the <span class="mono">conv_block</span> CAM tap for case <span class="mono">203125_1</span> — the exact tensors this baseline averages. Rather than show them one by one, here is their distribution.</p>
+      <p class="intuition reveal" style="max-width:66ch; margin-top:0.8rem"><b>And here is the surprise.</b> On a small toy CNN almost every channel goes silent — a filter that doesn't respond outputs all zeros after the ReLU. A real trained backbone does neither that nor the opposite: only <b id="chan-zeroch">—</b> channel is exactly zero, yet the means split into <b>two clusters two orders of magnitude apart</b>. The lower half of the channels contributes just <b id="chan-halfshare">—</b> of the average. Sparsity is real, but it lives at the <em>voxel</em> level — <b id="chan-zero">—</b> of the individual activations in this tensor are exactly zero. That is precisely why averaging is a weak localiser: the handful of channels that respond to <em>this</em> lesion get divided by <span id="chan-total3" class="mono">640</span>.</p>
+      <div class="chandist reveal" id="channels-mount"></div>
+      <p class="figcap reveal">Distribution of mean activation across all <span id="chan-total4" class="mono">640</span> <span class="mono">conv_block</span> channels for case <span class="mono">203125_1</span>. Log x — the means span three orders of magnitude, so a linear axis would collapse two thirds of the channels into a single bar. Channels that are exactly zero cannot sit on a log axis; they are annotated at the left of the axis break rather than drawn as a bar, since one channel against a 282-tall mode would be a sub-pixel sliver. Hover a bar for its range and count, or open the table view; individual channel slices are on the <a href="../index.html#layers">network page</a>.</p>
     </div>
   </section>
 
@@ -129,61 +129,34 @@
     initBench("notgradcam");
   </script>
   <script type="module">
-    import { loadJSON, drawFeature } from "../js/data.js?v=2";
+    import { loadJSON } from "../js/data.js?v=2";
+    import { renderChannelDistribution } from "../js/chandist.js?v=2";
     (async () => {
       const manifest = await loadJSON("../public/data/manifest.json");
       // cache-bust: activations.json content changes on re-export (channel count); the example id is stable
       const acts = await loadJSON(`../public/data/examples/${manifest.examples[0]}/activations.json?cb=${Date.now()}`);
       const s2 = acts.find((e) => e.layer === "stage2");
       const mount = document.getElementById("channels-mount");
-
-      // Rendered channels: the ones with an exported slice payload.
-      const withSlice = new Map(s2.channels.map((c) => [c.index, c]));
-      // Every channel at the tap, ordered by mean. Channels without a slice are
-      // shown as a compact mean/max chip so the FULL set being averaged is
-      // visible, not just the top few (R3.4).
       const all = s2.all_channels || s2.channels;
-      const SILENT = 1e-6;
-      let active = 0;
 
-      for (const c of all) {
-        const isSilent = c.max <= SILENT;
-        if (!isSilent) active++;
-        const full = withSlice.get(c.index);
-        const cell = document.createElement("div");
-        cell.className = "chan-cell" + (isSilent ? " silent" : "") + (full ? "" : " chip");
-        if (isSilent) {
-          const ph = document.createElement("div");
-          ph.className = "chan-ph"; ph.textContent = "silent";
-          cell.appendChild(ph);
-        } else if (full) {
-          const cv = document.createElement("canvas");
-          drawFeature(cv, full.slice);
-          cell.appendChild(cv);
-        } else {
-          const ph = document.createElement("div");
-          ph.className = "chan-ph"; ph.textContent = c.mean.toFixed(2);
-          cell.appendChild(ph);
-        }
-        const lab = document.createElement("span");
-        lab.className = "chan-lab";
-        lab.innerHTML = `ch ${c.index} · <b>${c.mean.toFixed(2)}</b>`;
-        cell.appendChild(lab);
-        mount.appendChild(cell);
-      }
+      // Every displayed number comes from the exported arrays, never a literal.
+      const stats = renderChannelDistribution(mount, all, {
+        tapName: s2.real_name ?? "conv_block",
+        caseId: manifest.examples[0],
+      });
 
-      const n = document.getElementById("chan-active");
-      if (n) n.textContent = String(active);
-      const totN = String(s2.n_channels ?? all.length);
-      for (const id of ["chan-total", "chan-total2"]) {
+      const put = (id, text) => {
         const el = document.getElementById(id);
-        if (el) el.textContent = totN;
-      }
-      const zero = document.getElementById("chan-zero");
-      if (zero) zero.textContent = Math.round((s2.frac_zero ?? 0) * 100) + "%";
+        if (el) el.textContent = text;
+      };
+      const totN = String(s2.n_channels ?? stats.total);
+      for (const id of ["chan-total", "chan-total3", "chan-total4"]) put(id, totN);
+      put("chan-zeroch", String(stats.zeros));
+      put("chan-halfshare", stats.lowerHalfShare.toFixed(1) + "%");
+      put("chan-zero", Math.round((s2.frac_zero ?? 0) * 100) + "%");
     })().catch((e) => {
       const m = document.getElementById("channels-mount");
-      if (m) m.innerHTML = `<span style="color:var(--danger); font-family:var(--mono); font-size:0.8rem">serve over http to load the channels</span>`;
+      if (m) m.innerHTML = `<span style="color:var(--danger); font-family:var(--mono); font-size:0.8rem">serve over http to load the channel distribution</span>`;
       console.error(e);
     });
   </script>
