@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -87,17 +87,17 @@
           <li data-sym="igc"><b>IGC</b> — the Integrated Grad-CAM map</li>
           <li data-sym="norm"><b>normalize / Up</b> — min-max rescale to [0, 1], then trilinear-upsample to input size</li>
           <li data-sym="abs"><b>| · |</b> — absolute value (magnitude)</li>
-          <li data-sym="delta"><b>ΔA = A(x) − A(baseline)</b> — the <span class="mono">stage2</span> feature difference between the input <b>x</b> and the baseline (the <em>per-volume mean</em> volume, not zero)</li>
+          <li data-sym="delta"><b>ΔA = A(x) − A(baseline)</b> — the <span class="mono">conv_block</span> feature difference between the input <b>x</b> and the baseline (the <em>per-volume mean</em> volume, not zero)</li>
           <li data-sym="hadamard"><b>⊙</b> — element-wise product</li>
           <li data-sym="avg"><b>(1/steps) Σ<sub>α</sub></b> — average over <b>steps</b> = 20 points along the path</li>
-          <li data-sym="grad"><b>∂y<sup>c</sup>/∂A(x<sub>α</sub>)</b> — gradient of the class-<b>c</b> score w.r.t. <span class="mono">stage2</span> features at interpolation point <b>x<sub>α</sub></b></li>
+          <li data-sym="grad"><b>∂y<sup>c</sup>/∂A(x<sub>α</sub>)</b> — gradient of the class-<b>c</b> score w.r.t. <span class="mono">conv_block</span> features at interpolation point <b>x<sub>α</sub></b></li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. It path-integrates gradients at the <span class="mono">stage2</span> tap from a per-volume mean baseline.</p>
+        <p>The real function from the codebase — nothing hidden. It path-integrates gradients at the <span class="mono">conv_block</span> tap from a per-volume mean baseline.</p>
         <div class="codeblock">
           <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>integrated_gradcam()</span></div>
 <pre>def integrated_gradcam(
-    model: ToyCNN,
+    model: JSCAdapter,
     x: torch.Tensor,
     target: int | torch.Tensor | None = None,
     layer: str = TARGET_LAYER,
@@ -126,7 +126,7 @@
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
           <li>Baseline is the per-volume mean (not zero) in input space.</li>
-          <li>Integration is over the <span class="mono">stage2</span> feature gradients, then multiplied by the feature delta ΔA.</li>
+          <li>Integration is over the <span class="mono">conv_block</span> feature gradients, then multiplied by the feature delta ΔA.</li>
           <li>Combines IG's path-integration with CAM's feature-localisation.</li>
         </ol>
       </div>

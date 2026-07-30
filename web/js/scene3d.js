@@ -128,16 +128,16 @@ function buildScenes(deck, { acts, ctPayload, heatPayload }) {
   }
   // 1 — stage1
   { const el = planeScene(); fillChannels(el, s1.channels);
-    scenes.push({ el, rail: "stage1", title: "stage1 · early features",
-      body: `Conv block 1 lifts the scan into ${shape(s1)} — low-level edges and texture. Showing ${shown(s1)} channels.` }); }
+    scenes.push({ el, rail: "encoder", title: "Encoder · mid-level features",
+      body: `The PlainConvUNet encoder lifts the scan to ${shape(s1)} — texture and vessel structure. Showing ${shown(s1)} channels by mean activation.` }); }
   // 2 — stage2 (CAM tap)
   { const el = planeScene({ tap: true }); fillChannels(el, s2.channels);
-    scenes.push({ el, rail: "stage2 · tap", title: "stage2 — the CAM tap", tap: true,
-      body: `Every attribution method reads the feature volume here (${shape(s2)}). Grad-CAM weights these channels by their gradient toward the class score.` }); }
+    scenes.push({ el, rail: "conv_block · tap", title: "conv_block — the CAM tap", tap: true,
+      body: `Every attribution method reads the feature volume here (${shape(s2)}) — the FPN-fused features the classification head pools over. ${s2 ? Math.round(s2.frac_zero * 100) : "—"}% of these voxels are exactly zero after the ReLU. Grad-CAM weights these channels by their gradient toward the malignancy logit.` }); }
   // 3 — stage3
   { const el = planeScene(); fillChannels(el, s3.channels);
-    scenes.push({ el, rail: "stage3", title: "stage3 · deep features",
-      body: `Conv block 3 — the deepest, most class-specific features (${shape(s3)}), just before pooling.` }); }
+    scenes.push({ el, rail: "bottleneck", title: "Encoder bottleneck · deep features",
+      body: `The deepest encoder stage — the most class-specific, lowest-resolution features (${shape(s3)}).` }); }
   // 4 — global pool -> logit
   {
     const el = document.createElement("div");
@@ -154,10 +154,10 @@ function buildScenes(deck, { acts, ctPayload, heatPayload }) {
     });
     const chip = document.createElement("div");
     chip.className = "logit-chip";
-    chip.innerHTML = 'GAP → logit <span class="g">→ p(tumour)</span>';
+    chip.innerHTML = 'GAP → logit <span class="g">→ p(malignant)</span>';
     el.appendChild(bars); el.appendChild(chip);
     scenes.push({ el, rail: "GAP → logit", title: "Global pool → class score",
-      body: "Each feature channel is averaged to a single number; a linear layer turns that vector into the tumour-vs-not logit." });
+      body: "Each of the 640 conv_block channels is averaged to a single number; Linear(640→320)→Linear(320→1) turns that vector into one malignancy logit — positive means malignant." });
   }
   // 5 — Grad-CAM back-projection
   {
@@ -328,7 +328,7 @@ export function mountFlow(mount, { acts, ctPayload, heatPayload }) {
   const find = (l) => acts.find((e) => e.layer === l);
   const shapeOf = (e) => (e ? e.feature_shape.join("×") : "—");
   const specs = [
-    { name: "CT input", sub: "1×32×32×32", tiles: [{ p: ctPayload, k: "gray" }], hint: "the scan going in" },
+    { name: "CT input", sub: "1×64×128×128", tiles: [{ p: ctPayload, k: "gray" }], hint: "the scan going in" },
     { name: "stage1", sub: shapeOf(find("stage1")), feat: find("stage1"), hint: "edges & texture" },
     { name: "stage2", sub: shapeOf(find("stage2")), feat: find("stage2"), tap: true, hint: "the CAM tap — every method reads here" },
     { name: "stage3", sub: shapeOf(find("stage3")), feat: find("stage3"), hint: "deep, class-specific features" },

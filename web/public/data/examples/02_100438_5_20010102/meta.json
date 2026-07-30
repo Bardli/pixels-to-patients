@@ -1,0 +1,74 @@
+{
+  "example_id": "02_100438_5_20010102",
+  "case_id": "100438_5_20010102",
+  "true_label": 0,
+  "pred_label": 0,
+  "logits": [
+    -6.102257251739502
+  ],
+  "prob_malignant": 0.002232813974842429,
+  "z_slice": 32,
+  "input_shape": [
+    64,
+    128,
+    128
+  ],
+  "methods": [
+    "notgradcam",
+    "gradcam",
+    "guided_gradcam",
+    "layercam",
+    "occlusion",
+    "integrated_gradients",
+    "integrated_gradcam"
+  ],
+  "gt_voxels": 58,
+  "gt_volume_fraction": 5.53131103515625e-05,
+  "pred_mask_voxels": 50,
+  "seg_dice": 0.9074074074074074,
+  "outcome": "TN",
+  "metrics": {
+    "notgradcam": {
+      "mass_in_gt": 0.00015663772289325665,
+      "inside_outside_ratio": 2.832124168042559,
+      "pointing_acc": 0.0,
+      "enrichment": 2.8318371882848186
+    },
+    "gradcam": {
+      "mass_in_gt": 0.00017893220331604992,
+      "inside_outside_ratio": 3.235296760097287,
+      "pointing_acc": 0.0,
+      "enrichment": 3.234896793522937
+    },
+    "guided_gradcam": {
+      "mass_in_gt": 8.748454640026349e-05,
+      "inside_outside_ratio": 1.5816749518141857,
+      "pointing_acc": 1.0,
+      "enrichment": 1.5816240642448738
+    },
+    "layercam": {
+      "mass_in_gt": 0.00015796910996696042,
+      "inside_outside_ratio": 2.856200419788846,
+      "pointing_acc": 0.0,
+      "enrichment": 2.8559071974606116
+    },
+    "occlusion": {
+      "mass_in_gt": 0.0010973072940262995,
+      "inside_outside_ratio": 19.858798951800193,
+      "pointing_acc": 0.0,
+      "enrichment": 19.83810505415381
+    },
+    "integrated_gradients": {
+      "mass_in_gt": 0.00020863379363182796,
+      "inside_outside_ratio": 3.772447198440234,
+      "pointing_acc": 0.0,
+      "enrichment": 3.7718687722635797
+    },
+    "integrated_gradcam": {
+      "mass_in_gt": 0.00011752907597489054,
+      "inside_outside_ratio": 2.124928218143789,
+      "pointing_acc": 0.0,
+      "enrichment": 2.124796006369773
+    }
+  }
+}

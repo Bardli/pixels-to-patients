@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -48,9 +48,10 @@
   <section>
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The channels being averaged</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:66ch">All 16 feature-map channels at <span class="mono">stage2</span> for case <span class="mono">lung_038</span> — the exact tensors this baseline averages. Most are blank: after the ReLU, a filter that doesn't respond to this patch outputs <em>all zeros</em>, so its channel adds nothing to the mean. Only <b id="chan-active">—</b> of 16 fire for this input.</p>
+      <p class="intuition reveal" style="max-width:66ch">All <b id="chan-total">—</b> feature-map channels at the <span class="mono">conv_block</span> CAM tap for case <span class="mono">203125_1</span> — the exact tensors this baseline averages, ordered by mean activation. The six with the highest mean are rendered as slices; the rest are shown as their mean, and any channel that is entirely zero is marked <em>silent</em>.</p>
+      <p class="intuition reveal" style="max-width:66ch; margin-top:0.8rem"><b>And here is the surprise.</b> On a small toy CNN almost every channel goes silent — a filter that doesn't respond outputs all zeros after the ReLU. A real trained backbone does the opposite: <b id="chan-active">—</b> of <span id="chan-total2" class="mono">640</span> channels carry signal here. The sparsity is real but it lives at the <em>voxel</em> level, not the channel level — <b id="chan-zero">—</b> of the individual activations in this tensor are exactly zero. That is precisely why averaging is a weak localiser: mean over hundreds of busy channels dilutes the class-specific signal into the anatomy that is merely <em>present</em>.</p>
       <div class="chan-grid reveal" id="channels-mount"></div>
-      <p class="figcap reveal">Each tile is one channel's <span class="mono">stage2</span> feature slice (turbo, per-channel contrast-stretched), labelled <span class="mono">ch · mean</span>. <span class="chan-dot"></span> = silent (all-zero). The mean map is these tiles, averaged and upsampled — dominated by the few that fire.</p>
+      <p class="figcap reveal">Each tile is one channel's <span class="mono">conv_block</span> feature slice (turbo, per-channel contrast-stretched), labelled <span class="mono">ch · mean</span>. <span class="chan-dot"></span> = silent (all-zero). The mean map is <em>every</em> channel averaged and upsampled — which is why it tracks anatomy that is merely present rather than evidence for the class.</p>
     </div>
   </section>
 
@@ -78,27 +79,35 @@
         </div>
         <ul class="math-where">
           <li data-sym="M"><b>M(x)</b> — the saliency map produced for the input volume <b>x</b></li>
-          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap (16 channels)</li>
-          <li data-sym="mean"><b>(1/K) Σ<sub>k</sub></b> — the plain mean over all <b>K</b> = 16 channels; no gradients and no class — that is the whole point of this baseline</li>
+          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">conv_block</span> tap (640 channels)</li>
+          <li data-sym="mean"><b>(1/K) Σ<sub>k</sub></b> — the plain mean over all <b>K</b> = 640 channels; no gradients and no class — that is the whole point of this baseline</li>
           <li data-sym="up"><b>Up</b> — trilinear-upsample the mean map back to the input volume size</li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. It averages the <span class="mono">stage2</span> feature channels; note the <span class="mono">target</span> argument is deliberately unused.</p>
+        <p>The real function from the codebase — nothing hidden. It averages the 640 <span class="mono">conv_block</span> feature channels; note that no target class is passed in at all.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>notgradcam()</span></div>
-<pre>def notgradcam(
-    model: ToyCNN, x: torch.Tensor, target: int | torch.Tensor | None = None, layer: str = TARGET_LAYER
-) -&gt; torch.Tensor:
-    del target
-    model.eval()
-    with torch.no_grad():
-        _, features = model(x, return_features=True)
-        cam = features[layer].mean(dim=1, keepdim=True)
-    return normalize_map(upsample_to_input(cam, x))</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_notgradcam()</span></div>
+<pre>def _compute_notgradcam(model, x_batch, stages, stage_names,
+                        target_shape, pid):
+    """Activation maps: mean channel activation per stage (no gradients)."""
+    raw = {}
+    for sname, stage_mod in zip(stage_names, stages):
+        features = []
+        def hook_fn(mod, inp, out, _f=features):
+            _f.append(out)
+        handle = stage_mod.register_forward_hook(hook_fn)
+        with torch.no_grad():                  # no backward pass at all
+            model(x_batch)
+        handle.remove()
+        feat = features[0][0]                  # (640, 16, 16, 16)
+        att = feat.mean(dim=0).float().cpu().numpy()   # mean over channels
+        att = _upsample_to(att, target_shape)          # -&gt; (64, 128, 128)
+        raw[sname] = att
+    return raw</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
-          <li><b>Class-agnostic</b> — the <span class="mono">target</span> argument is ignored; the map is identical for every class.</li>
+          <li><b>Class-agnostic</b> — no target class is passed at all; the map is identical whichever class you ask about.</li>
           <li><b>No backward pass</b> — pure forward activations, <span class="mono">torch.no_grad()</span>.</li>
           <li>It answers "where is the network active?", not "where for THIS class?" — the honest baseline against which Grad-CAM's value is judged.</li>
         </ol>
@@ -127,18 +136,33 @@
       const acts = await loadJSON(`../public/data/examples/${manifest.examples[0]}/activations.json?cb=${Date.now()}`);
       const s2 = acts.find((e) => e.layer === "stage2");
       const mount = document.getElementById("channels-mount");
+
+      // Rendered channels: the ones with an exported slice payload.
+      const withSlice = new Map(s2.channels.map((c) => [c.index, c]));
+      // Every channel at the tap, ordered by mean. Channels without a slice are
+      // shown as a compact mean/max chip so the FULL set being averaged is
+      // visible, not just the top few (R3.4).
+      const all = s2.all_channels || s2.channels;
+      const SILENT = 1e-6;
       let active = 0;
-      for (const c of s2.channels) {
+
+      for (const c of all) {
+        const isSilent = c.max <= SILENT;
+        if (!isSilent) active++;
+        const full = withSlice.get(c.index);
         const cell = document.createElement("div");
-        cell.className = "chan-cell" + (c.max > 0 ? "" : " silent");
-        if (c.max > 0) {
-          active++;
+        cell.className = "chan-cell" + (isSilent ? " silent" : "") + (full ? "" : " chip");
+        if (isSilent) {
+          const ph = document.createElement("div");
+          ph.className = "chan-ph"; ph.textContent = "silent";
+          cell.appendChild(ph);
+        } else if (full) {
           const cv = document.createElement("canvas");
-          drawFeature(cv, c.slice);
+          drawFeature(cv, full.slice);
           cell.appendChild(cv);
         } else {
           const ph = document.createElement("div");
-          ph.className = "chan-ph"; ph.textContent = "silent";
+          ph.className = "chan-ph"; ph.textContent = c.mean.toFixed(2);
           cell.appendChild(ph);
         }
         const lab = document.createElement("span");
@@ -147,8 +171,16 @@
         cell.appendChild(lab);
         mount.appendChild(cell);
       }
+
       const n = document.getElementById("chan-active");
       if (n) n.textContent = String(active);
+      const totN = String(s2.n_channels ?? all.length);
+      for (const id of ["chan-total", "chan-total2"]) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = totN;
+      }
+      const zero = document.getElementById("chan-zero");
+      if (zero) zero.textContent = Math.round((s2.frac_zero ?? 0) * 100) + "%";
     })().catch((e) => {
       const m = document.getElementById("channels-mount");
       if (m) m.innerHTML = `<span style="color:var(--danger); font-family:var(--mono); font-size:0.8rem">serve over http to load the channels</span>`;

@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -81,7 +81,7 @@
         <div class="codeblock">
           <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>guided_gradcam()</span></div>
 <pre>def guided_gradcam(
-    model: ToyCNN,
+    model: JSCAdapter,
     x: torch.Tensor,
     target: int | torch.Tensor | None = None,
     layer: str = TARGET_LAYER,

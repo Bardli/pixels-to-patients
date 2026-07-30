@@ -7,9 +7,10 @@
 import { loadJSON, drawGray, drawHeat, realValue, cellBox, fmtMetric, METRIC_LABELS, METHOD_LABELS } from "./data.js";
 
 const METRIC_HINT = {
+  enrichment: "vs a uniform map",
   mass_in_gt: "heat inside lesion",
   inside_outside_ratio: "contrast in vs out",
-  pointing_acc: "peak on tumour",
+  pointing_acc: "peak on nodule",
 };
 
 export function initBench(method, root = "../public/data") {
@@ -35,16 +36,15 @@ export function initBench(method, root = "../public/data") {
     drawGray(els.ct, ct);
     drawHeat(els.heat, attr);
     if (els.gt) els.gt.src = `${root}/examples/${id}/mask_slice.png`;
-    if (els.gtCap) els.gtCap.innerHTML = meta.true_label === 1
-      ? `<b class="gt-t">Ground truth</b> · the tumour`
-      : `<b class="gt-t">Ground truth</b> · no tumour here`;
+    if (els.gtCap) els.gtCap.innerHTML =
+      `<b class="gt-t">Ground truth</b> · the nodule`;
 
     // orientation: this is ONE axial slice of a D-deep 3D volume
     let badge = els.viewer.querySelector(".badge");
     if (!badge) { badge = document.createElement("div"); badge.className = "badge"; els.viewer.appendChild(badge); }
     badge.textContent = `axial · z ${meta.z_slice} / ${meta.input_shape[0]}`;
 
-    const truth = meta.true_label === 1 ? "tumour-present" : "non-tumour";
+    const truth = meta.true_label === 1 ? "malignant" : "benign";
     const ok = meta.pred_label === meta.true_label;
     els.verdict.innerHTML =
       `case <b>${shortLabel(id)}</b> · truth <b>${truth}</b> · prediction ` +
@@ -82,7 +82,7 @@ export function initBench(method, root = "../public/data") {
   });
 
   // Rebuild the bench into a side-by-side comparison: [ground truth | attribution].
-  // The eye judges "did the heat land on the tumour?"; the scorecard quantifies it.
+  // The eye judges "did the heat land on the nodule?"; the scorecard quantifies it.
   function buildCompare() {
     const viewer = els.viewer;
     const bench = viewer.closest(".bench");
@@ -93,10 +93,10 @@ export function initBench(method, root = "../public/data") {
     const gtFig = document.createElement("figure"); gtFig.className = "cmp";
     const gtBox = document.createElement("div"); gtBox.className = "viewer gt";
     const gtImg = document.createElement("img"); gtImg.id = "gtimg";
-    gtImg.alt = "Ground-truth tumour region shaded green on the CT slice";
+    gtImg.alt = "Ground-truth nodule region shaded green on the CT slice";
     gtBox.appendChild(gtImg); gtFig.appendChild(gtBox);
     const gtCap = document.createElement("figcaption");
-    gtCap.innerHTML = `<b class="gt-t">Ground truth</b> · the tumour`;
+    gtCap.innerHTML = `<b class="gt-t">Ground truth</b> · the nodule`;
     gtFig.appendChild(gtCap);
 
     const mFig = document.createElement("figure"); mFig.className = "cmp";
@@ -112,7 +112,7 @@ export function initBench(method, root = "../public/data") {
 
     const fc = parent.querySelector(".figcap");
     if (fc) fc.innerHTML =
-      `<b>Fig.</b> same axial slice · <span class="gt">green</span> = ground-truth tumour · ` +
+      `<b>Fig.</b> same axial slice · <span class="gt">green</span> = ground-truth nodule · ` +
       `<span class="accent">${label}</span> heat-map on the right — hover it to read voxels`;
   }
 

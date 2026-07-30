@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -76,14 +76,14 @@
           <li data-sym="sum"><b>Σ<sub>k</sub></b> — sum over all feature channels <b>k</b></li>
           <li data-sym="grad"><b>∂y<sup>c</sup>/∂A<sup>k</sup></b> — per-voxel gradient of the class-<b>c</b> score <b>y<sup>c</sup></b> w.r.t. channel <b>A<sup>k</sup></b>, kept per-voxel (not global-average-pooled — the key difference from Grad-CAM)</li>
           <li data-sym="hadamard"><b>⊙</b> — element-wise (Hadamard) product: multiply the positive gradient by the activation voxel-by-voxel</li>
-          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap</li>
+          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">conv_block</span> tap</li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. Tapped at <span class="mono">stage2</span> like Grad-CAM, but the weighting is element-wise rather than global-average-pooled.</p>
+        <p>The real function from the codebase — nothing hidden. Tapped at <span class="mono">conv_block</span> like Grad-CAM, but the weighting is element-wise rather than global-average-pooled.</p>
         <div class="codeblock">
           <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>layercam()</span></div>
 <pre>def layercam(
-    model: ToyCNN,
+    model: JSCAdapter,
     x: torch.Tensor,
     target: int | torch.Tensor | None = None,
     layer: str = TARGET_LAYER,
@@ -102,7 +102,7 @@
         <ol class="gotchas">
           <li>Per-voxel weights, not global-average-pooled → finer detail than Grad-CAM at the same layer.</li>
           <li>ReLU on the gradient keeps only positive local evidence.</li>
-          <li>Still tapped at <span class="mono">stage2</span> and trilinearly upsampled.</li>
+          <li>Still tapped at <span class="mono">conv_block</span> and trilinearly upsampled.</li>
         </ol>
       </div>
     </div>

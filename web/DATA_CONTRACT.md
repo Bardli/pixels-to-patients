@@ -1,9 +1,28 @@
 # Web Export Data Contract
 
-This document freezes the schema of the static data bundle written by
-`uv run gradcam-repro web-export` into `web/public/data/`. The three
-top-level index files — `manifest.json`, `model_graph.json`, and
-`benchmark.json` — each carry `"schema": "gradcam-repro.web-bundle.v1"`. The
+> **v2 (2026-07-29).** The bundle is now written by
+> `python scripts/jsc_web_export.py` from the **published JSC / LUNA25** model,
+> replacing the toy `RealCtCNN` on MSD `Task06_Lung`. Schema string is
+> `gradcam-repro.web-bundle.v2`. Changes forced by the model swap:
+>
+> | Change | Why |
+> |---|---|
+> | `logits` is length **1**, not 2; `pred_label` is `logit > 0`, not `argmax` | JSC's head emits a single logit for binary tasks |
+> | `model_graph.json` nodes are `input, encoder, fpn, conv_block, pool, classifier, logits, seg_head`; `cam_tap` is `"conv_block"` | Real PlainConvUNet + FPN path, not 3 toy conv stages |
+> | New `examples/<id>/pred_mask_slice.png` | JSC segments as well as classifies, so its own predicted mask is an independent check on localisation. The toy CNN had no such output. |
+> | New metric `enrichment` = `mass_in_gt / gt_volume_fraction`; **replaces `mass_in_gt` as the headline** | Real nodules span 0.02–0.5% of the volume, so raw mass collapses to ~0.00x and stops being comparable between a small and a large lesion. A uniform heat-map scores exactly 1.0. |
+> | New `meta.json` fields: `prob_malignant`, `gt_voxels`, `gt_volume_fraction`, `pred_mask_voxels`, `seg_dice`, `outcome` | Needed to select and label success/failure exemplars |
+> | New `manifest.json` fields: `model`, `deviations` | Records the published checkpoint's identity and every deliberate departure from the official inference script |
+> | Slices are **128×128** | Patch size is `(64,128,128)`, not 32³ |
+> | `activations.json` entries gain `real_name`, `all_channels`, `n_silent`, `n_channels`, `frac_zero` | The `layer` ids stay `stage1/stage2/stage3` as an interface contract with `web/js/scene3d.js`, but they now tap `encoder.stages[2]`, `conv_block`, and `encoder.stages[5]`. `real_name` carries the truth and is what the UI labels. `all_channels` lists every channel's mean/max (no slice payload) so the baseline page can show the **whole** set being averaged (R3.4) without shipping 640 slice arrays. |
+>
+> Sections below describe v1 field-by-field and remain accurate except where
+> the table above overrides them.
+
+This document freezes the schema of the static data bundle written into
+`web/public/data/`. The three top-level index files — `manifest.json`,
+`model_graph.json`, and `benchmark.json` — each carry
+`"schema": "gradcam-repro.web-bundle.v2"`. The
 per-example files (`meta.json`, `ct_slice.json`, `attributions/<method>.json`,
 `activations.json`) carry no `schema` key; `activations.json` in particular is
 a bare JSON array, not an object. The bundle is fully static (plain files, no
@@ -25,6 +44,7 @@ web/public/data/
     ├── ct_slice.png        # grayscale axial slice at z_slice
     ├── ct_slice.json       # slice payload (hover values)
     ├── mask_slice.png      # CT with GT tumour mask in green
+    ├── pred_mask_slice.png # CT with the model's OWN predicted mask in orange (v2)
     ├── attributions/<method>.png    # turbo heatmap overlay
     ├── attributions/<method>.json   # slice payload (already-normalised heatmap)
     └── activations.json
@@ -236,8 +256,17 @@ payload is ever computed.)
 ## activations.json
 
 **The one file whose JSON root is a bare array, not an object** — a list of
-exactly 3 entries, one per convolutional stage, in order `stage1`, `stage2`,
-`stage3`.
+exactly 3 entries, in order `stage1`, `stage2`, `stage3`. In v2 those ids are an
+interface contract only; the real tap points are `encoder.stages[2]`,
+`conv_block` (the CAM tap), and `encoder.stages[5]`, reported per entry as
+`real_name`.
+
+Measured note: only the `conv_block` tap is sparse (~52–72% of activations
+exactly zero, varying by case). The encoder taps sit before their activation, so
+their `frac_zero` is 0.000 and essentially no channel is ever fully silent —
+across the five shipped examples `n_silent` at the tap is 0 or 1 out of 640.
+This is the opposite of the toy CNN's behaviour and the baseline page's prose
+reflects it.
 
 Each array entry:
 

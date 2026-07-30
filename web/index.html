@@ -24,29 +24,29 @@
     <div class="container hero-grid">
       <div class="stagger">
         <p class="label eyeline">MICCAI Educational Challenge 2026 · From Pixels to Patients</p>
-        <h1>Is the network looking at the <em>tumour</em>&nbsp;— or an artifact?</h1>
+        <h1>Is the network looking at the <em>nodule</em>&nbsp;— or an artifact?</h1>
         <p class="lede">A hands-on tour of seven attribution methods, implemented from scratch and measured on real lung&#8209;CT. Hover the layers, step through the computation, and see&nbsp;— quantitatively&nbsp;— where each heat&#8209;map actually lands.</p>
         <div class="cta-row">
           <a class="btn primary" href="methods/notgradcam.html">Start the tour <span class="arrow">→</span></a>
         </div>
       </div>
 
-      <figure class="panel" aria-label="Reading panel: CT input, ground-truth tumour mask, and Grad-CAM heat-map for one lung case">
+      <figure class="panel" aria-label="Reading panel: CT input, ground-truth nodule mask, and Grad-CAM heat-map for one LUNA25 case">
         <div class="panel-bar">
-          <span>Case · lung_038 · tumour-present</span>
+          <span>Case · 203125_1 · malignant (logit +3.51)</span>
           <span class="dot" aria-hidden="true"></span>
         </div>
         <div class="scan-row">
           <figure class="scan">
-            <img src="public/data/examples/00_lung_038_pos1/ct_slice.png" alt="Axial CT slice of a lung patch" />
+            <img src="public/data/examples/00_203125_1_19990102/ct_slice.png" alt="Axial CT slice of a lung patch" />
             <figcaption>CT input</figcaption>
           </figure>
           <figure class="scan">
-            <img src="public/data/examples/00_lung_038_pos1/mask_slice.png" alt="Ground-truth tumour mask overlaid in green" />
-            <figcaption class="gt">GT mask</figcaption>
+            <img src="public/data/examples/00_203125_1_19990102/mask_slice.png" alt="Ground-truth nodule mask overlaid in green" />
+            <figcaption class="gt">GT nodule</figcaption>
           </figure>
           <figure class="scan">
-            <img src="public/data/examples/00_lung_038_pos1/attributions/gradcam.png" alt="Grad-CAM heat-map overlaid on the CT slice" />
+            <img src="public/data/examples/00_203125_1_19990102/attributions/gradcam.png" alt="Grad-CAM heat-map overlaid on the CT slice" />
             <figcaption class="accent">Grad-CAM</figcaption>
           </figure>
         </div>
@@ -62,13 +62,14 @@
         <span class="rule" aria-hidden="true"></span>
       </div>
       <p class="lede reveal" style="margin-bottom:1.6rem; max-width:72ch">
-        One lung&#8209;CT patch — the scan above — is the running example for this entire piece, from the
-        <b>Medical Segmentation Decathlon</b> (<span class="mono">Task06_Lung</span>), reframed as a
-        tumour&#8209;present&#8209;vs&#8209;not classifier. Watch it flow through the network — the <b>real activation maps</b>
-        at every layer. <b>Hover any layer</b> to enlarge it and unfold its channels.
+        One lung&#8209;CT patch — the scan above — is the running example for this entire piece, a
+        screening&#8209;CT nodule crop from <b>LUNA25</b> (<span class="mono">FLARE&#8209;AutoMSC
+        Dataset005</span>) scored for <b>malignancy</b> by the published
+        <b>JSC</b> joint segmentation + classification baseline. Watch it flow through the network — the
+        <b>real activation maps</b> at every layer. <b>Hover any layer</b> to enlarge it and unfold its channels.
       </p>
       <div class="reveal" id="flow-mount"></div>
-      <p class="figcap reveal" style="margin-top:1.1rem">Real activations for case <span class="mono">lung_038</span> · turbo-coloured, contrast-stretched per channel · hover a layer to expand its top channels.</p>
+      <p class="figcap reveal" style="margin-top:1.1rem">Real activations for case <span class="mono">203125_1</span> · turbo-coloured, contrast-stretched per channel · hover a layer to expand its top channels.</p>
     </div>
   </section>
 
@@ -77,14 +78,14 @@
       <div class="sec-head reveal"><span class="num">▸</span><h2>The architecture</h2><span class="rule"></span></div>
       <p class="intuition reveal" style="max-width:62ch; margin-bottom:1.6rem">Each block is a layer, drawn to scale: the <b>face</b> is the spatial resolution and the <b>depth</b> is the channel count — so you watch resolution shrink as channels grow. <b>Drag to orbit.</b></p>
       <div class="reveal" id="arch-mount"></div>
-      <p class="figcap" style="margin-top:0.9rem">Real <span class="mono">RealCtCNN</span> from <span class="mono">model.py</span> · shapes are channels×D×H×W · click a conv stage to inspect its activations below</p>
+      <p class="figcap" style="margin-top:0.9rem">Real <span class="mono">PlainConvUNet</span> + FPN classification head from the published JSC fold&#8209;3 checkpoint · shapes are channels×D×H×W · click a stage to inspect its activations below</p>
     </div>
   </section>
 
   <section id="forward">
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The forward pass, in 3D</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:64ch; margin-bottom:1.8rem">Walk one CT volume through the network, stage by stage — hit <b>Play</b>, use the arrows, or click a stage on the rail. <b>Drag the scene to orbit it.</b> The data is real — each plane is an exported feature-map channel, turbo-coloured and contrast-stretched per channel so the sparse post-ReLU activations show. Watch <span class="mono">stage2</span> light up: that is where all seven attribution methods read.</p>
+      <p class="intuition reveal" style="max-width:64ch; margin-bottom:1.8rem">Walk one CT volume through the network, stage by stage — hit <b>Play</b>, use the arrows, or click a stage on the rail. <b>Drag the scene to orbit it.</b> The data is real — each plane is an exported feature-map channel, turbo-coloured and contrast-stretched per channel so the sparse post-ReLU activations show. Watch the <span class="mono">conv_block</span> tap light up: that is where all seven attribution methods read.</p>
       <div class="pipe" id="pipe">
         <div class="pipe-sticky">
           <div class="stage3d" id="pipeStage" role="img" aria-label="3D visualisation of a CT volume passing through the convolutional network; scroll to advance through the stages, drag to rotate">
@@ -119,7 +120,7 @@
           <p class="label" style="margin-bottom:0.8rem">Activation distribution</p>
           <div class="hist reveal" id="hist"></div>
           <div class="hist-ax"><span id="hmin">–</span><span id="hmax">–</span></div>
-          <p class="intuition" style="font-size:0.95rem; margin-top:1.2rem; max-width:46ch">Most activations sit near zero after ReLU — the long tail on the right is where the feature actually fires. Tumour-present cases push more mass into that tail at <span class="mono">stage2</span>.</p>
+          <p class="intuition" style="font-size:0.95rem; margin-top:1.2rem; max-width:46ch">Most activations sit near zero after ReLU — the long tail on the right is where the feature actually fires. Malignant cases push more mass into that tail at the <span class="mono">conv_block</span> tap.</p>
         </div>
       </div>
     </div>
@@ -155,8 +156,12 @@
 
     function renderLayerTabs() {
       const lt = document.getElementById("layer-tabs");
+      const nameOf = (l) => {
+        const e = curActs && curActs.find((x) => x.layer === l);
+        return e && e.real_name ? e.real_name : l;
+      };
       lt.innerHTML = ["stage1", "stage2", "stage3"].map((l) =>
-        `<button class="tab" data-layer="${l}" aria-selected="${l === curLayer}">${l}${l === "stage2" ? " · CAM tap" : ""}</button>`).join("");
+        `<button class="tab" data-layer="${l}" aria-selected="${l === curLayer}">${nameOf(l)}</button>`).join("");
       lt.querySelectorAll(".tab").forEach((el) =>
         el.addEventListener("click", () => { curLayer = el.dataset.layer; syncLayer(); }));
     }
@@ -171,9 +176,14 @@
       const entry = curActs.find((e) => e.layer === curLayer);
       const shown = { ...entry, channels: entry.channels.slice(0, 8) };  // data now holds all channels; cap the deck display
       const lab = document.getElementById("chan-label");
-      if (lab) lab.textContent = `Showing ${shown.channels.length} of ${entry.feature_shape[0]} channels · feature slice z′ ${entry.feature_z}/${entry.feature_shape[1]}`;
+      if (lab) {
+        const pctZero = Math.round((entry.frac_zero ?? 0) * 100);
+        lab.textContent = `Showing ${shown.channels.length} of ${entry.feature_shape[0]} channels (highest mean first)`
+          + ` · feature slice z′ ${entry.feature_z}/${entry.feature_shape[1]}`
+          + (entry.n_silent != null ? ` · ${entry.n_silent} channel(s) silent · ${pctZero}% of voxels exactly zero` : "");
+      }
       mountDeck(document.getElementById("deck-mount"), shown, {
-        badge: `${curLayer} · axial · z′ ${entry.feature_z}/${entry.feature_shape[1]}`,
+        badge: `${entry.real_name || curLayer} · axial · z′ ${entry.feature_z}/${entry.feature_shape[1]}`,
       });
       const h = entry.histogram, max = Math.max(...h.counts, 1);
       document.getElementById("hist").innerHTML = h.counts.map((c) =>

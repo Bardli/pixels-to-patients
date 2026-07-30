@@ -577,6 +577,10 @@ footer a.link:hover { color: var(--accent); }
 .chan-cell { display: flex; flex-direction: column; gap: 0.3rem; align-items: center; }
 .chan-cell canvas, .chan-ph { width: 100%; aspect-ratio: 1 / 1; border-radius: 3px; border: 1px solid var(--line-dk); image-rendering: pixelated; }
 .chan-cell.silent { opacity: 0.7; }
+/* Channels without an exported slice: a compact mean chip, so the full set
+   being averaged stays visible without shipping hundreds of slice payloads. */
+.chan-cell.chip .chan-ph { border-style: solid; background: #10131a; color: var(--ink-dim); font-size: 0.58rem; letter-spacing: 0.04em; text-transform: none; }
+.chan-grid { max-height: 30rem; overflow-y: auto; padding-right: 0.3rem; }
 .chan-ph { display: flex; align-items: center; justify-content: center; background: #0c0d10; border-style: dashed; color: var(--ink-faint); font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase; }
 .chan-lab { font-family: var(--mono); font-size: 0.56rem; color: var(--ink-faint); }
 .chan-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; background: #0c0d10; border: 1px dashed var(--line); }

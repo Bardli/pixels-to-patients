@@ -17,7 +17,7 @@
     <div class="container">
       <p class="label kicker">Method 05 / 07 · perturbation-based · model-agnostic</p>
       <h1>Occlusion Sensitivity</h1>
-      <p class="intuition">No gradients at all — slide a small cube over the volume, blank it out, and measure how much the tumour probability drops. A big drop means an important region.</p>
+      <p class="intuition">No gradients at all — slide a small cube over the volume, blank it out, and measure how much the malignancy probability drops. A big drop means an important region.</p>
     </div>
   </div>
 
@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -49,7 +49,7 @@
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>How it works</h2><span class="rule"></span></div>
       <div class="prose reveal">
-        <p>Occlusion sensitivity uses no gradients at all. It treats the network as a black box: blank out a region of the input, measure how far the tumour probability falls, and map that drop back onto the volume.</p>
+        <p>Occlusion sensitivity uses no gradients at all. It treats the network as a black box: blank out a region of the input, measure how far the malignancy probability falls, and map that drop back onto the volume.</p>
         <h3>The math</h3>
         <div class="mathblock">
           <div class="math-line">
@@ -75,74 +75,33 @@
           <li data-sym="pblank"><b>P(c | x with a cube blanked at p)</b> — the same probability after replacing a small cube at <b>p</b> with the <em>per-volume mean</em> (not zero — avoids injecting a fake black-cube edge). No gradients are used.</li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. It perturbs the <em>input</em> volume directly — no feature tap and no gradients.</p>
+        <p>The real function from the codebase — nothing hidden. It perturbs the <em>input</em> volume directly — no feature tap and no gradients. It is the one method of the seven that needs no backward pass at all.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>occlusion_sensitivity()</span></div>
-<pre>def occlusion_sensitivity(
-    model: ToyCNN,
-    x: torch.Tensor,
-    target: int | torch.Tensor | None = None,
-    mask_size: int = 4,
-    stride: int = 4,
-    fill_value: float | None = None,
-    batch_size: int = 64,
-) -&gt; torch.Tensor:
-    model.eval()
-    with torch.no_grad():
-        logits = model(x)
-        if target is None:
-            target_tensor = logits.argmax(dim=1)
-        elif isinstance(target, int):
-            target_tensor = torch.full((x.shape[0],), target, device=x.device, dtype=torch.long)
-        else:
-            target_tensor = target.to(device=x.device, dtype=torch.long)
-        base_probs = logits.softmax(dim=1).gather(1, target_tensor.view(-1, 1)).view(-1)
-    batch, _, depth, height, width = x.shape
-    heatmap = torch.zeros((batch, 1, depth, height, width), device=x.device, dtype=x.dtype)
-    counts = torch.zeros_like(heatmap)
-    fill_tensor = (
-        x.detach().mean(dim=(1, 2, 3, 4), keepdim=True)
-        if fill_value is None
-        else None
-    )
-    positions = [
-        (z, y, x0)
-        for z in range(0, depth - mask_size + 1, stride)
-        for y in range(0, height - mask_size + 1, stride)
-        for x0 in range(0, width - mask_size + 1, stride)
-    ]
-    for start in range(0, len(positions), batch_size):
-        chunk = positions[start : start + batch_size]
-        occluded = x.repeat_interleave(len(chunk), dim=0).clone()
-        for sample_idx in range(batch):
-            offset = sample_idx * len(chunk)
-            for j, (z, y, x0) in enumerate(chunk):
-                replacement = fill_value if fill_tensor is None else fill_tensor[sample_idx]
-                occluded[
-                    offset + j,
-                    :,
-                    z : z + mask_size,
-                    y : y + mask_size,
-                    x0 : x0 + mask_size,
-                ] = replacement
-        with torch.no_grad():
-            probs = model(occluded).softmax(dim=1)
-        probs = probs.view(batch, len(chunk), -1)
-        target_probs = probs.gather(
-            2, target_tensor.view(batch, 1, 1).expand(batch, len(chunk), 1)
-        ).squeeze(2)
-        drops = base_probs[:, None] - target_probs
-        for j, (z, y, x0) in enumerate(chunk):
-            heatmap[
-                :,
-                :,
-                z : z + mask_size,
-                y : y + mask_size,
-                x0 : x0 + mask_size,
-            ] += drops[:, j].view(batch, 1, 1, 1, 1)
-            counts[:, :, z : z + mask_size, y : y + mask_size, x0 : x0 + mask_size] += 1
-    heatmap = (heatmap / counts.clamp_min(1)).clamp_min(0)
-    return normalize_map(heatmap)</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_occlusion()</span></div>
+<pre>def _compute_occlusion(model, x_batch, target_shape, target_cls,
+                       extract_logits_fn, config, pid):
+    """Occlusion Sensitivity via MONAI."""
+    from monai.visualize import OcclusionSensitivity
+    wrapped = _MonaiGradCamWrapper(model, None, extract_logits_fn)
+    wrapped = wrapped.to(x_batch.device)
+    wrapped.eval()
+    occ = OcclusionSensitivity(nn_module=wrapped,
+                               mask_size=config.occ_mask_size,   # 16
+                               n_batch=config.occ_n_batch)
+    occ_map, _ = occ(x_batch, class_idx=target_cls,
+                     overlap=config.occ_overlap)
+    occ_arr = occ_map[0, 0].cpu().numpy()
+
+    # MONAI returns the class SCORE with the region occluded, not the drop
+    # in score. High therefore means "occluding here barely changed the
+    # prediction" -- the region is UNimportant, the inverse of every other
+    # method's convention. Negate so high = important.
+    # Measured before this fix: in-lesion 0.00 while surrounding vessels
+    # ran 0.6-0.8, i.e. the nodule read as the coldest thing in the volume.
+    occ_arr = -occ_arr
+
+    occ_arr = _upsample_to(occ_arr, target_shape)
+    return occ_arr</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">

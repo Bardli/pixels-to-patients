@@ -32,13 +32,13 @@
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
           <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
-          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with Grad-CAM overlaid · real 32³ voxels</p>
+          <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with Grad-CAM overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
           <p class="verdict" id="verdict">&nbsp;</p>
           <div class="scorecard" id="scorecard"></div>
           <p class="intuition" style="font-size:0.98rem; margin-top:1.4rem; max-width:52ch">
-            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the tumour mask: <span class="mono">mass&nbsp;in&nbsp;GT</span> is the share of heat inside the lesion, <span class="mono">inside/outside</span> the contrast ratio, <span class="mono">pointing</span> whether the single hottest voxel lands on the tumour.
+            The heat-map is drawn live from the exported attribution values (0–1). Metrics compare it against the nodule mask: <span class="mono">enrichment</span> is how much more concentrated the heat is on the lesion than a uniform map (1.00× means no better than uniform), <span class="mono">mass&nbsp;in&nbsp;GT</span> the raw share of heat inside it, <span class="mono">inside/outside</span> the contrast ratio, and <span class="mono">pointing</span> whether the single hottest voxel lands on the nodule.
           </p>
         </div>
       </div>
@@ -90,8 +90,8 @@
           </div>
         </div>
         <ul class="math-where">
-          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">stage2</span> tap (16 channels)</li>
-          <li data-sym="grad"><b>y<sup>c</sup></b> — the network's raw score (logit) for the target class <b>c</b> (tumour-present vs. not)</li>
+          <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">conv_block</span> tap (640 channels)</li>
+          <li data-sym="grad"><b>y<sup>c</sup></b> — the network's raw score for the target class <b>c</b>. JSC emits a <em>single</em> logit, so class 1 (malignant) uses <b>+z</b> and class 0 (benign) uses <b>−z</b></li>
           <li data-sym="grad"><b>∂y<sup>c</sup>/∂A<sup>k</sup></b> — gradient of that score w.r.t. channel <b>k</b>: how much each voxel of the channel moves the score</li>
           <li data-sym="gap"><b>GAP</b> — global-average pool: average over the whole D×H×W volume, giving one number per channel</li>
           <li data-sym="alpha"><b>α<sub>k</sub><sup>c</sup></b> — the resulting weight for channel <b>k</b>: how important it is for class <b>c</b></li>
@@ -101,73 +101,92 @@
           <li data-sym="up"><b>trilinear-upsample</b> — resize <b>L<sup>c</sup></b> from the feature grid back up to the input volume size</li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. The CAM is tapped at <span class="mono">stage2</span>, a 16-channel feature volume.</p>
+        <p>The real function from the codebase — nothing hidden. The CAM is tapped at <span class="mono">conv_block</span>, the 640-channel feature volume the classification head pools over.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>gradcam()</span></div>
-<pre>def gradcam(model, x, target=None, layer="stage2", normalize=True):
-    model.eval()
-    model.zero_grad(set_to_none=True)
-    logits, activation = _cam_forward(model, x, layer)   # activation.retain_grad()
-    score_for_target(logits, target).backward()          # one backward pass
-    gradients = activation.grad                           # dyc / dA^k
-    weights = gradients.mean(dim=(2, 3, 4), keepdim=True) # a_k^c = GAP(grad)
-    cam = (weights * activation).sum(dim=1, keepdim=True).clamp_min(0)  # ReLU
-    cam = upsample_to_input(cam, x)                       # trilinear
-    return normalize_map(cam) if normalize else cam</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_truegradcam()</span></div>
+<pre>def _compute_truegradcam(model, x_batch, stages, stage_names, target_shape,
+                         target_cls, extract_logits_fn, pid):
+    """True Grad-CAM via MONAI, with inversion fix."""
+    raw = {}
+    for sname, stage_mod in zip(stage_names, stages):
+        wrapped = _MonaiGradCamWrapper(model, stage_mod, extract_logits_fn)
+        wrapped = wrapped.to(x_batch.device)
+        wrapped.eval()
+        tl_name = _get_module_name(wrapped, stage_mod)
+        cam = GradCAM(nn_module=wrapped, target_layers=[tl_name])
+        # MONAI's default_normalizer maps (min,max)-&gt;(1,0), inverting the map.
+        cam_t = cam(x_batch, class_idx=target_cls)
+        if cam_t.ndim == 5:
+            cam_t = cam_t[:, 0]
+        att = cam_t[0].detach().cpu().numpy().astype(np.float32)
+        att = 1.0 - att                       # undo MONAI inversion
+        att = _upsample_to(att, target_shape) # (16,16,16) -&gt; (64,128,128)
+        raw[sname] = att
+    return raw</pre>
         </div>
         <h3>The shared code</h3>
-        <p>Every method here builds on two pieces of shared code. First, the network exposes its intermediate feature volumes, so an attribution method can tap any stage:</p>
+        <p>Every method here builds on two pieces of shared code. First, the published JSC network is wrapped so attribution can drive its own forward and backward pass. The official inference script is gradient-free at three nested levels — <span class="mono">@torch.inference_mode()</span> on the predict, sliding-window, and mirror paths — and <span class="mono">inference_mode</span> tensors can never re-enter autograd, so the forward pass has to be <em>re-run</em> rather than patched:</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/model.py</span><span>RealCtCNN.forward()</span></div>
-<pre>def forward(self, x, return_features=False):
-    features = {}
-    x = self.stage1(x); features["stage1"] = x
-    x = self.stage2(x); features["stage2"] = x   # ← the CAM tap
-    x = self.stage3(x); features["stage3"] = x
-    logits = self.classifier(self.pool(x).flatten(1))
-    if return_features:
-        return logits, features
-    return logits</pre>
+          <div class="cap"><span>scripts/jsc_gradcam.py</span><span>JSCAdapter</span></div>
+<pre>class JSCAdapter(torch.nn.Module):
+    """JSC network as forward(x) -&gt; (seg_logits, cls_logit).
+
+    A plain nn.Module with no inference_mode in its call path, so
+    run_gradcam can drive forward/backward itself.
+    """
+    def __init__(self, network):
+        super().__init__()
+        self.network = network
+        # CAM tap: conv_block output, (1, 640, z/4, y/8, x/8)
+        self.conv_block = network.conv_block
+
+    def forward(self, x):
+        return self.network(x)
+
+# get_stages_fn     = lambda m: [m.conv_block]   # where to tap
+# extract_logits_fn = lambda out: out[1]         # (seg, cls) -&gt; cls</pre>
         </div>
-        <p>Second, a small scaffold hooks the tapped activation (keeping its gradient), selects the class to explain, and normalises + upsamples the result. Every method calls these helpers:</p>
+        <p>Second, JSC's head emits a <b>single</b> logit rather than one score per class, which breaks the <span class="mono">logits[:, class_idx]</span> convention every method uses. Two helpers reconcile it — and getting the sign wrong here silently inverts every malignant case's heat-map:</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>shared scaffold</span></div>
-<pre>TARGET_LAYER = "stage2"
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>single-logit scaffold</span></div>
+<pre>def _as_two_column(logits):
+    """Single logit z -&gt; [-z, +z]. Column 1 is evidence FOR malignant,
+    column 0 its negation. Differentiable, so gradients are unaffected."""
+    if logits.ndim == 2 and logits.shape[1] == 1:
+        return torch.cat([-logits, logits], dim=1)
+    return logits
 
-def _cam_forward(model, x, layer=TARGET_LAYER):
-    logits, features = model(x, return_features=True)
-    activation = features[layer]
-    activation.retain_grad()              # keep grad on a non-leaf tensor
-    return logits, activation
-
-def score_for_target(logits, target):     # the logit to explain, summed for backward()
-    target = logits.argmax(1) if target is None else target
-    return logits.gather(1, target.view(-1, 1)).sum()
-
-def upsample_to_input(heatmap, x):        # feature grid → input grid
-    return F.interpolate(heatmap, size=x.shape[-3:], mode="trilinear", align_corners=False)
-
-def normalize_map(heatmap, eps=1e-8):     # min-max each map to [0, 1]
-    flat = heatmap.flatten(1)
-    view = (heatmap.shape[0],) + (1,) * (heatmap.ndim - 1)
-    lo = flat.min(1).values.view(view); hi = flat.max(1).values.view(view)
-    return (heatmap - lo) / (hi - lo + eps)</pre>
+def _pick_target_class(logits, user_target_class):
+    if logits.shape[1] == 1:
+        # target_class == -1 means "explain the predicted class", so it must
+        # follow the prediction: logit &gt; 0 is class 1. Hard-mapping -1 to
+        # class 0 here would invert every positive case's heat-map, because
+        # the class-0 attribution is the negation of the class-1 attribution.
+        if user_target_class == -1:
+            cls = 1 if logits[0, 0].item() &gt; 0 else 0
+        else:
+            cls = int(user_target_class)
+        score = logits[0, 0] if cls == 1 else -logits[0, 0]
+        return cls, score
+    cls = (int(torch.argmax(logits[0]).item())
+           if user_target_class == -1 else int(user_target_class))
+    return cls, logits[0, cls]</pre>
         </div>
         <h3>The computation, step by step</h3>
         <p>Below, watch Grad-CAM run end to end on a real case.</p>
         <ol class="gotchas">
-          <li><b>A CT patch enters the network.</b> One 32×32×32 lung-CT patch, HU-normalised to [0,1]. The classifier must decide: tumour-present or not. <span class="mono">x ∈ ℝ^(1 × 32 × 32 × 32)</span></li>
-          <li><b>Forward pass → three stages, one tap.</b> The CNN stacks three conv stages — stage1 → stage2 → stage3 — each a feature volume of shrinking size. Grad-CAM taps the middle one, stage2 (16 channels at 8×8×8). <span class="mono">A = stage2(x) ∈ ℝ^(16 × 8 × 8 × 8)</span></li>
+          <li><b>A CT patch enters the network.</b> One 64×128×128 screening-CT nodule crop, CT-normalised with the plans statistics. The classifier must decide: malignant or benign. <span class="mono">x ∈ ℝ^(1 × 64 × 128 × 128)</span></li>
+          <li><b>Forward pass → encoder, FPN, one tap.</b> The PlainConvUNet encoder runs six stages (32→320 channels) and the FPN fuses the last three skips back to a single 320-channel volume, which <span class="mono">conv_block</span> lifts to 640. Grad-CAM taps that output. <span class="mono">A = conv_block(x) ∈ ℝ^(640 × 16 × 16 × 16)</span></li>
           <li><b>Backward pass → one weight per channel.</b> A single backward pass from the target logit gives ∂yᶜ/∂Aᵏ. Average each channel's gradient over the volume → a scalar importance weight αₖ. (Computed live in the notebook.) <span class="mono">αₖᶜ = GAP( ∂yᶜ / ∂Aᵏ )</span></li>
           <li><b>Weighted sum, ReLU, upsample.</b> Weight the channels, sum them, keep the positive part, and trilinearly upsample back to the input grid. This is the raw Grad-CAM heat-map. <span class="mono">Lᶜ = Up( ReLU( Σₖ αₖᶜ Aᵏ ) )</span></li>
-          <li><b>Overlay to localise.</b> Laid over the CT, the heat-map shows where the network's evidence for the class lives — hopefully on the lesion. Each method page scores whether it does, against the tumour mask. <span class="mono">read-out = CT ⊕ heat</span></li>
+          <li><b>Overlay to localise.</b> Laid over the CT, the heat-map shows where the network's evidence for the class lives — hopefully on the lesion. Each method page scores whether it does, against the nodule mask. <span class="mono">read-out = CT ⊕ heat</span></li>
         </ol>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
           <li><b>Gradients are global-average-pooled</b> over the whole 3D volume to get one weight per channel — the core CAM assumption that a channel's importance is spatially uniform.</li>
           <li><b>ReLU comes after the weighted sum</b>, not before. It keeps only evidence <em>for</em> the target class, which is why Grad-CAM maps look "positive".</li>
-          <li><b>Tapped at <span class="mono">stage2</span></b>, so the raw map is at feature-volume resolution, then trilinearly upsampled. The heat-map is inherently coarse — a property of where you tap.</li>
-          <li><b><span class="mono">activation.retain_grad()</span> is mandatory</b> — <span class="mono">stage2</span> is a non-leaf tensor, so without it <span class="mono">activation.grad</span> is <span class="mono">None</span>.</li>
+          <li><b>Tapped at <span class="mono">conv_block</span></b>, so the raw map is 16×16×16 and is trilinearly upsampled 8× in-plane to 64×128×128. The heat-map is inherently coarse — a property of where you tap.</li>
+          <li><b>The forward pass must be re-run under <span class="mono">enable_grad()</span></b> — the official inference path is wrapped in <span class="mono">@torch.inference_mode()</span> at three levels, and tensors made inside it can never re-enter autograd, so there is no gradient to hook after the fact.</li>
         </ol>
       </div>
     </div>

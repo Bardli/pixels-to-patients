@@ -112,6 +112,7 @@ export const METHOD_LABELS = {
 };
 
 export const METRIC_LABELS = {
+  enrichment: "Enrichment",
   mass_in_gt: "Mass in GT",
   inside_outside_ratio: "Inside / outside",
   pointing_acc: "Pointing hit",
@@ -119,6 +120,9 @@ export const METRIC_LABELS = {
 
 export function fmtMetric(key, value) {
   if (key === "pointing_acc") return value >= 0.5 ? "✓ hit" : "✗ miss";
+  // Enrichment is mass normalised by the mask's volume fraction: a uniform
+  // heat-map is exactly 1.0, so it reads as a multiplier, not a percentage.
+  if (key === "enrichment") return value.toFixed(2) + "×";
   if (key === "inside_outside_ratio") return value.toFixed(2) + "×";
   return (value * 100).toFixed(1) + "%";
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Compare — Grad-CAM on CT</title>
-  <meta name="description" content="All seven attribution methods run on one lung-CT case, scored against the ground-truth tumour mask and ranked by measured overlap — because a saliency map cannot be judged by eye." />
+  <meta name="description" content="All seven attribution methods run on one LUNA25 screening-CT case, scored against the ground-truth nodule mask and ranked by measured enrichment — because a saliency map cannot be judged by eye." />
   <link rel="stylesheet" href="styles.css?v=13" />
   <style>
     /* Page-specific layout only — every color/component reused from styles.css
@@ -33,7 +33,7 @@
     <div class="container">
       <p class="label kicker">Seven methods · one case · ranked by measurement</p>
       <h1>Seven methods, one case — measured</h1>
-      <p class="intuition">A heat-map can look sharp and confident and still be wrong about where the tumour is. You cannot judge a saliency map by eye — so here are all seven methods from this tour, run on the <em>same</em> slice, scored against the ground-truth mask, and ranked by how much of their heat actually lands inside the tumour.</p>
+      <p class="intuition">A heat-map can look sharp and confident and still be wrong about where the nodule is. You cannot judge a saliency map by eye — so here are all seven methods from this tour, run on the <em>same</em> slice of the <em>same</em> published model, scored against the ground-truth nodule mask, and ranked by <span class="mono">enrichment</span>: how much more concentrated their heat is on the lesion than a uniform map would be.</p>
     </div>
   </div>
 
@@ -44,11 +44,11 @@
       <p class="label" id="case-lab" style="margin-bottom:1.6rem">&nbsp;</p>
 
       <figure class="cmp gt-fig">
-        <div class="viewer gt"><img id="gt-img" alt="Ground-truth tumour region shaded green on the CT slice" /></div>
+        <div class="viewer gt"><img id="gt-img" alt="Ground-truth nodule region shaded green on the CT slice" /></div>
         <figcaption id="gt-cap">&nbsp;</figcaption>
       </figure>
 
-      <div class="cmp-grid" id="grid" role="list" aria-label="Seven attribution methods, ranked by share of heat inside the tumour mask"></div>
+      <div class="cmp-grid" id="grid" role="list" aria-label="Seven attribution methods, ranked by enrichment of heat on the nodule mask"></div>
 
       <p class="figcap" id="rank-cap" style="max-width:64ch; margin-top:1.8rem">&nbsp;</p>
     </div>
@@ -81,18 +81,21 @@
       const manifest = await loadJSON(`${ROOT}/manifest.json`);
       const id = manifest.examples[0];
       const meta = await loadJSON(`${ROOT}/examples/${id}/meta.json`);
-      const truth = meta.true_label === 1 ? "tumour-present" : "non-tumour";
+      const truth = meta.true_label === 1 ? "malignant" : "benign";
 
       document.getElementById("case-lab").textContent = `Case ${shortLabel(id)} · ${truth}`;
       document.getElementById("gt-img").src = `${ROOT}/examples/${id}/mask_slice.png`;
-      document.getElementById("gt-cap").innerHTML = meta.true_label === 1
-        ? `<b class="gt-t">Ground truth</b> · the tumour every method below is scored against`
-        : `<b class="gt-t">Ground truth</b> · no tumour in this slice`;
+      document.getElementById("gt-cap").innerHTML =
+        `<b class="gt-t">Ground truth</b> · the nodule every method below is scored against`
+        + ` · ${meta.gt_voxels} voxels (${(meta.gt_volume_fraction * 100).toFixed(2)}% of the volume)`;
 
-      // Rank the 7 methods by how much of their heat lands inside the GT mask.
+      // Rank by enrichment, not raw mass. Real nodules occupy a fraction of a
+      // percent of the volume, so raw mass collapses toward zero and is not
+      // comparable between a small nodule and a large one; enrichment divides
+      // it out (uniform heat-map = exactly 1.0).
       const ranked = meta.methods
         .map((method) => ({ method, m: meta.metrics[method] }))
-        .sort((a, b) => b.m.mass_in_gt - a.m.mass_in_gt);
+        .sort((a, b) => b.m.enrichment - a.m.enrichment);
 
       document.getElementById("grid").innerHTML = ranked.map(({ method, m }, i) => {
         const rank = i + 1;
@@ -113,8 +116,9 @@
 
       const top = ranked[0];
       document.getElementById("rank-cap").innerHTML =
-        `<b>Fig.</b> all seven methods on case <b>${shortLabel(id)}</b>, ranked by <span class="mono">mass in GT</span> — ` +
-        `<b>${METHOD_LABELS[top.method]}</b> tops it at ${fmtMetric("mass_in_gt", top.m.mass_in_gt)}. ` +
+        `<b>Fig.</b> all seven methods on case <b>${shortLabel(id)}</b>, ranked by <span class="mono">enrichment</span> — ` +
+        `<b>${METHOD_LABELS[top.method]}</b> tops it at ${fmtMetric("enrichment", top.m.enrichment)} ` +
+        `(a uniform heat-map would score exactly 1.00×). ` +
         `Not necessarily the map that looks sharpest or most convincing by eye — visual conviction and measured overlap are different things, and ranking on the latter is the entire point of this page.`;
     })().catch((e) => {
       document.getElementById("grid").innerHTML =
@@ -126,22 +130,22 @@
   <script>
     // Comprehension quiz — self-contained; answers verified against src/attribution.py + the exported metrics.
     const QUIZ = [
-      { q: "Two saliency maps for the same tumour: map A looks sharp and focused, map B looks blurry. Which should you trust more?",
+      { q: "Two saliency maps for the same nodule: map A looks sharp and focused, map B looks blurry. Which should you trust more?",
         options: ["A — a sharper map is more accurate", "B — blur captures more context", "Neither by eye — measure each against the ground-truth mask"],
         answer: 2,
-        explain: "The core lesson of this tour: visual conviction is not correctness. Only measuring overlap with the tumour mask tells you which map actually localises the lesion." },
+        explain: "The core lesson of this tour: visual conviction is not correctness. Only measuring overlap with the nodule mask tells you which map actually localises the lesion." },
       { q: "Occlusion sensitivity blanks a small cube in the scan and measures the drop in class probability. What should the cube be filled with?",
         options: ["Zeros (black)", "The per-volume mean intensity", "Random noise"],
         answer: 1,
         explain: "Filling with zero injects a fake high-contrast edge the network reacts to — an artifact, not evidence. The per-volume mean keeps the perturbation neutral." },
-      { q: "At the stage2 CAM tap the network has 16 feature channels. For the example lung patch, roughly how many actually fire?",
-        options: ["All 16", "About 10", "About 3 — the rest are all-zero after ReLU"],
-        answer: 2,
-        explain: "After the ReLU, filters that don't respond to this patch output zeros. Only ~3 channels carry signal, which is why the mean-activation map is dominated by them." },
-      { q: "Integrated Gradients had the highest mass-in-GT (33.5%) on the example case, yet its hottest voxel missed the tumour (pointing = miss). What does that show?",
-        options: ["Different metrics can disagree — “best” depends on what you measure", "The metric is broken", "Integrated Gradients is always the best method"],
+      { q: "At the conv_block CAM tap the JSC network has 640 feature channels. For the example nodule patch, roughly how many actually fire?",
+        options: ["Almost all of them — 639 of 640", "About half", "Only a handful — the rest are all-zero after ReLU"],
         answer: 0,
-        explain: "A method can win on one metric and fail another. That is exactly why the tour reports three metrics instead of trusting a single number." },
+        explain: "639 of 640 channels carry some signal, even though 71% of individual voxels are exactly zero after the ReLU. A real trained backbone spreads its representation across nearly every channel — which is exactly why plain mean-activation (notGradCAM) is a weak localiser here: averaging 640 busy channels blurs the class-specific signal away." },
+      { q: "On the example case Guided Grad-CAM's hottest voxel lands inside the nodule (pointing = hit), yet its enrichment is 1.01 — the score a completely uniform heat-map would get. What does that show?",
+        options: ["Different metrics can disagree — “best” depends on what you measure", "The metric is broken", "Guided Grad-CAM is always the best method"],
+        answer: 0,
+        explain: "Pointing accuracy asks only where the single peak lands; enrichment asks how concentrated the whole map is. A map can nail the peak and still spread its mass everywhere else. That is exactly why the tour reports several metrics instead of trusting a single number." },
       { q: "The mean-activation-map baseline ignores the target class entirely. What can it therefore NOT do?",
         options: ["Tell one class apart from another — its map is identical for every class", "Produce a heat-map at all", "Run without gradients"],
         answer: 0,
