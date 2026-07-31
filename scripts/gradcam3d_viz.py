@@ -611,9 +611,10 @@ def _upsample_to(att, target_shape):
                 order=1)
 
 
-def _compute_notgradcam(model, x_batch, stages, stage_names, target_shape, pid):
+def _compute_notgradcam(model, x_batch, stages, stage_names, target_shape, pid,
+                        return_terms=False):
     """Activation maps: mean channel activation per stage (no gradients)."""
-    raw = {}
+    raw, terms = {}, {}
     for sname, stage_mod in zip(stage_names, stages):
         features = []
         def hook_fn(mod, inp, out, _f=features):
@@ -623,11 +624,23 @@ def _compute_notgradcam(model, x_batch, stages, stage_names, target_shape, pid):
             model(x_batch)
         handle.remove()
         feat = features[0][0]
-        att = feat.mean(dim=0).float().cpu().numpy()
-        att = _upsample_to(att, target_shape)
+        mean = feat.mean(dim=0).float()
+        if return_terms:
+            # The busiest channel, so the reader sees what a single Aᵏ looks
+            # like before it is averaged away. There is no gradient step here,
+            # and that absence is this page's whole argument.
+            ch_mean = feat.reshape(feat.shape[0], -1).mean(dim=1)
+            k = int(ch_mean.argmax().item())
+            terms[sname] = {
+                "activation": feat[k].float().cpu().numpy().astype(np.float32),
+                "relu": mean.cpu().numpy().astype(np.float32),
+                "channel": k,
+                "channel_means": ch_mean.float().cpu().numpy().astype(np.float32),
+            }
+        att = _upsample_to(mean.cpu().numpy(), target_shape)
         _validate_att_volume(att, target_shape, sname, "notgradcam", pid)
         raw[sname] = att
-    return raw
+    return {"raw": raw, "terms": terms} if return_terms else raw
 
 
 def _compute_truegradcam(model, x_batch, stages, stage_names, target_shape,
@@ -674,7 +687,7 @@ def _compute_guided_gradcam(model, x_batch, truegradcam_raw, stages, stage_names
 
 
 def _compute_layercam(model, x_batch, stages, stage_names, target_shape,
-                      target_cls, extract_logits_fn, pid):
+                      target_cls, extract_logits_fn, pid, return_terms=False):
     """Layer-CAM: ReLU(grad * activation) summed over channels, per stage."""
     device = x_batch.device
     activations = {}
@@ -696,15 +709,37 @@ def _compute_layercam(model, x_batch, stages, stage_names, target_shape,
         h.remove()
     model.zero_grad()
 
-    raw = {}
+    raw, terms = {}, {}
     for sname in stage_names:
         act = activations[sname]
         grad = gradients[sname]
-        lc = F.relu(grad * act).sum(dim=1)[0].cpu().numpy()
-        lc = _upsample_to(lc, target_shape)
+        prod = grad * act
+        lc_tap = F.relu(prod).sum(dim=1)[0]
+        if return_terms:
+            # LayerCAM's whole claim is that it keeps the gradient per voxel
+            # instead of pooling it. Worth showing honestly: at a tap followed by
+            # global average pooling the gradient is already spatially constant,
+            # so on THIS network the per-voxel weighting has nothing extra to
+            # say and LayerCAM differs from Grad-CAM only in where the ReLU sits
+            # -- inside the channel sum rather than after it. The page should
+            # make that point rather than imply a refinement that is not there.
+            gflat = grad[0].reshape(grad.shape[1], -1)
+            alpha_vec = grad.mean(dim=(2, 3, 4))[0]
+            k = int(alpha_vec.abs().argmax().item())
+            terms[sname] = {
+                "activation": act[0, k].cpu().numpy().astype(np.float32),
+                "hadamard": prod[0, k].cpu().numpy().astype(np.float32),
+                "relu": lc_tap.cpu().numpy().astype(np.float32),
+                "channel": k,
+                "alpha": float(alpha_vec[k].item()),
+                "alpha_all": alpha_vec.cpu().numpy().astype(np.float32),
+                "alpha_negative": int((alpha_vec < 0).sum().item()),
+                "grad_is_constant": bool(float(gflat.std(dim=1).max().item()) == 0.0),
+            }
+        lc = _upsample_to(lc_tap.cpu().numpy(), target_shape)
         _validate_att_volume(lc, target_shape, sname, "layercam", pid)
         raw[sname] = lc
-    return raw
+    return {"raw": raw, "terms": terms} if return_terms else raw
 
 
 def _compute_gradcam_decomposed(model, x_batch, stages, stage_names, target_shape,
