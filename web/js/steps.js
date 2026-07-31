@@ -14,7 +14,7 @@ export const STEPS = {
     { term: "activation", label: "Aᵏ", sym: "A",
       caption: "One channel of the tap, the busiest of the 640. This is all the baseline ever looks at." },
     { term: "vector:channel_means", label: "per-channel mean", sym: "M",
-      caption: "Every channel's mean activation. The baseline weights all of them equally — no class enters here." },
+      caption: "Every channel's mean activation. The baseline weights all of them equally, and no class enters here." },
     { term: "relu", label: "(1/K) Σₖ Aᵏ", sym: "mean",
       caption: "The plain mean over all 640 channels. It answers “where is the network active?”, not “where for this class?”" },
   ],
@@ -22,11 +22,11 @@ export const STEPS = {
   // 8 formula anchors: A alpha gap grad L relu sum up
   gradcam: [
     { term: "activation", label: "Aᵏ", sym: "A",
-      caption: "The tap activation for the channel with the largest |αₖ| — the one Grad-CAM leans on hardest." },
+      caption: "The tap activation for the channel with the largest |αₖ|, the one Grad-CAM leans on hardest." },
     { term: "vector:alpha_all", label: "αₖᶜ = GAP(∂yᶜ/∂Aᵏ)", sym: "gap",
       caption: "One pooled weight per channel. The gradient itself is spatially flat here, so this spread is where all the class information lives." },
     { term: "summed", label: "Σₖ αₖᶜAᵏ", sym: "sum",
-      caption: "Weighted sum over all 640 channels. Still signed — blue is evidence against the class." },
+      caption: "Weighted sum over all 640 channels. Still signed: blue is evidence against the class." },
     { term: "relu", label: "ReLU", sym: "relu",
       caption: "Negatives dropped, leaving evidence for the class only. This is the map the page scores, before it is upsampled 8× to the CT grid." },
   ],
@@ -36,7 +36,7 @@ export const STEPS = {
     { term: "activation", label: "Aᵏ", sym: "A",
       caption: "Same tap, same channel convention as Grad-CAM, so the two pages are comparable." },
     { term: "hadamard", label: "∂yᶜ/∂Aᵏ ⊙ Aᵏ", sym: "hadamard",
-      caption: "LayerCAM weights per voxel instead of pooling first. On this network the gradient is spatially constant, so that freedom has nothing to add — the difference from Grad-CAM is only where the ReLU sits." },
+      caption: "LayerCAM weights per voxel instead of pooling first. On this network the gradient is spatially constant, so that freedom has nothing to add: the difference from Grad-CAM is only where the ReLU sits." },
     { term: "relu", label: "Σₖ ReLU(…)", sym: "relu",
       caption: "ReLU inside the channel sum rather than after it. That ordering is LayerCAM's actual contribution here." },
   ],
@@ -78,10 +78,10 @@ export const STEPS = {
   // 6 formula anchors: abs gbp ggc hadamard norm upgc
   guided_gradcam: [
     { term: "guided_bp", label: "guided ∂yᶜ/∂x", sym: "gbp",
-      caption: "Guided backpropagation at full input resolution: sharp, edge-level, and signed — but it does not know where the class is." },
+      caption: "Guided backpropagation at full input resolution: sharp, edge-level, and signed, but it does not know where the class is." },
     { term: "cam_upsampled", label: "ReLU(Lᶜ) upsampled", sym: "upgc",
       caption: "The Grad-CAM map, class-localised but coarse: 16³ at the tap, stretched 8× in plane to reach the CT grid." },
     { term: "product", label: "guided ⊙ Lᶜ", sym: "ggc",
-      caption: "Their product. The CAM decides where, guided backprop decides which edges — neither alone is what this page scores." },
+      caption: "Their product. The CAM decides where, guided backprop decides which edges; neither alone is what this page scores." },
   ],
 };
