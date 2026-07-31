@@ -2,7 +2,8 @@
 
 Date: 2026-07-29
 Status: living record — Phase 0 complete, first attribution run green
-Companion to: [`2026-07-29-jsc-luna25-fullval-plan.md`](2026-07-29-jsc-luna25-fullval-plan.md)
+Companion plan removed in the 2026-07-30 repository cleanup; this file is the
+surviving record.
 
 Everything below was measured on this machine (3x RTX 6000 Ada, CUDA 13.0,
 `torch 2.13.0+cu130`), not carried over from the 2026-07-28 laptop session.
@@ -183,8 +184,7 @@ Of the seven methods, only Occlusion is pure-forward. The other six need hooks.
 
 ## 7. What `gradcam3d_viz` already solves
 
-The vendored 1534-line `scripts/gradcam3d_viz (2).py` (byte-identical to
-`experiments/3d/gradcam3d_viz.py`) is more mature than the M3 module the plan
+The vendored 1534-line `scripts/gradcam3d_viz.py` is more mature than the M3 module the plan
 proposed writing, and it retires one declared deviation outright.
 
 **7.1 A correct guided rule for LeakyReLU — deviation retired.**

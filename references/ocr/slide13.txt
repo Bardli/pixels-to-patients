@@ -1,6 +1,0 @@
-DEMO I Target cross in the LEFT (class 0) or RIGHT (class 1) half of a 32x32 scene.
-. : Distractors are irrelevant — ground-truth importance lives at the target.
-
-Seven methods, six inputs.
-
-13 DEMO I

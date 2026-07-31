@@ -2,8 +2,8 @@
 
 Everything the JSC / LUNA25 attribution pipeline needs that is **not** in this
 repository, with the exact commands to re-fetch it and SHA-256 digests to verify
-the result. Design rationale lives in
-[`docs/superpowers/specs/2026-07-28-jsc-luna25-attribution-design.md`](superpowers/specs/2026-07-28-jsc-luna25-attribution-design.md).
+the result. Measured findings and the deviation ledger live in
+[`docs/superpowers/specs/2026-07-29-jsc-wiring-findings.md`](superpowers/specs/2026-07-29-jsc-wiring-findings.md).
 
 Re-downloadable material is deliberately kept out of git: model weights
 (443.7 MB) and imaging data are reproducible from the commands below, so the
@@ -40,9 +40,15 @@ include = ["nnunetv2*"]
 `nnunetv2/training/nnUNetTrainer/nnUNetCLSTrainer.py:73`. Install it separately.
 
 ```bash
+uv sync                              # monai, SimpleITK, requests, torch, ...
 uv pip install -e third_party/JSC
-uv pip install torchmetrics          # 1.9.0 at time of writing
 ```
+
+`torchmetrics` and `monai` are both required and both easy to miss: JSC imports
+`torchmetrics` without declaring it, and `scripts/gradcam3d_viz.py` imports
+`monai.visualize` at module scope, so `jsc_gradcam.py` fails at import without
+it. Both are declared in this repository's `pyproject.toml`, so `uv sync`
+supplies them.
 
 `uv pip install` is used deliberately so `pyproject.toml` and `uv.lock` stay
 untouched. **Caveat: `uv sync` prunes anything not in the lockfile — re-run both
