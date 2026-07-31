@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Integrated Grad-CAM · From Pixels to Patients</title>
   <meta name="description" content="Integrated Grad-CAM: Integrated Gradients in feature space at the CAM tap, measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=18" />
+  <link rel="stylesheet" href="../styles.css?v=19" />
 </head>
 <body>
   <nav class="chain-top">
@@ -171,6 +171,12 @@
 
     return integrated_raw</pre>
         </div>
+        <h3>The computation, one term at a time</h3>
+        <p class="intuition" style="max-width:64ch">Every panel below is an exported
+          intermediate from this very case — no schematics. Step through and watch the
+          matching part of the formula above light up.</p>
+        <div id="stepper-mount"></div>
+
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
           <li>Baseline is the per-volume mean (not zero) in input space.</li>
@@ -193,6 +199,17 @@
   <script type="module">
     import { initBench } from "../js/bench.js?v=2";
     initBench("integrated_gradcam");
+  </script>
+  <script type="module">
+    import { mountStepper } from "../js/stepper.js?v=1";
+    import { loadJSON } from "../js/data.js?v=4";
+    const el = document.getElementById("stepper-mount");
+    if (el) {
+      try {
+        const man = await loadJSON("../public/data/manifest.json");
+        await mountStepper(el, { method: "integrated_gradcam", exampleId: man.examples[0] });
+      } catch (e) { el.remove(); console.error(e); }
+    }
   </script>
   <script src="../js/reveal.js"></script>
   <script type="module">

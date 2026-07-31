@@ -642,3 +642,37 @@ footer a.link:hover { color: var(--accent); }
 .quiz-explain b { color: var(--ink); }
 .quiz-score { justify-self: end; font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); padding: 0.5rem 0.2rem 0; }
 .quiz-score.complete { color: var(--accent); font-weight: 600; }
+
+/* ── Computation stepper ─────────────────────────────────────────────────────
+   The canvas holds real numbers at their own resolution (16×16 at the CAM tap,
+   64×64 for the input-space methods), so smoothing is off: a blurred cell reads
+   as data it is not. The vector panel is a different shape of fact — one value
+   per channel — and gets a wider, shorter box rather than a square. */
+.stepper { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; }
+.st-rail { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.st-step {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.55rem; border: 1px solid var(--line); border-radius: var(--radius);
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  font-family: var(--mono); font-size: 0.72rem; line-height: 1.4;
+}
+.st-step:hover { border-color: var(--accent); color: var(--ink); }
+.st-step[aria-selected="true"] { color: #fff; background: var(--accent); border-color: var(--accent); }
+.st-step .st-n { color: var(--ink-faint); }
+.st-step[aria-selected="true"] .st-n { color: rgba(255,255,255,0.7); }
+.st-stage {
+  display: flex; align-items: center; justify-content: center; min-height: 200px;
+  background: var(--bg-tint); border-radius: var(--radius); padding: 0.8rem;
+}
+.st-canvas {
+  width: 288px; height: 288px; image-rendering: pixelated;
+  border: 1px solid var(--line); background: #0c0d10;
+}
+.st-canvas.vector { width: 100%; max-width: 640px; height: 180px; image-rendering: auto; }
+.st-scalar { font-family: var(--mono); font-size: 2.4rem; color: var(--accent); }
+.st-cap { margin-top: 0.8rem; }
+.st-meta {
+  display: block; margin-top: 0.3rem; font-family: var(--mono);
+  font-size: 0.68rem; color: var(--ink-faint);
+}
+.sym-on { background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 2px; }

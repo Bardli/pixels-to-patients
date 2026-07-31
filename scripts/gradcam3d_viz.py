@@ -667,7 +667,8 @@ def _compute_truegradcam(model, x_batch, stages, stage_names, target_shape,
 
 
 def _compute_guided_gradcam(model, x_batch, truegradcam_raw, stages, stage_names,
-                            target_shape, target_cls, extract_logits_fn, pid):
+                            target_shape, target_cls, extract_logits_fn, pid,
+                            return_terms=False):
     """Guided Grad-CAM: guided backprop saliency * Grad-CAM per stage."""
     device = x_batch.device
     with guided_backprop_context(model):
@@ -677,13 +678,26 @@ def _compute_guided_gradcam(model, x_batch, truegradcam_raw, stages, stage_names
         guided_bp = x_input.grad[0].mean(dim=0).cpu().numpy()
     model.zero_grad()
 
-    raw = {}
+    raw, terms = {}, {}
     for sname in stage_names:
         gc = truegradcam_raw[sname]
         gc_relu = np.maximum(gc, 0)
         raw[sname] = guided_bp * gc_relu
         _validate_att_volume(raw[sname], target_shape, sname, "guided_gradcam", pid)
-    return raw
+        if return_terms:
+            # This method's three stages are genuinely different objects, which is
+            # why it earns a stepper of its own: a signed input-space saliency at
+            # full resolution, a coarse class-localised CAM upsampled 8x from the
+            # tap, and their product. The product is the point -- the CAM says
+            # WHERE and guided backprop says WHICH EDGES, and neither alone is
+            # what the page scores.
+            terms[sname] = {
+                "guided_bp": guided_bp.astype(np.float32),
+                "cam_upsampled": gc_relu.astype(np.float32),
+                "product": raw[sname].astype(np.float32),
+                "channel": None,
+            }
+    return {"raw": raw, "terms": terms} if return_terms else raw
 
 
 def _compute_layercam(model, x_batch, stages, stage_names, target_shape,

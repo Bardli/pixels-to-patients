@@ -477,9 +477,11 @@ def main() -> int:
             net, x_batch, stages, stage_names, target_shape, target_cls,
             cfg.extract_logits_fn, case)["terms"]["stage0"]
 
-        raws["guided_gradcam"] = gradcam3d_viz._compute_guided_gradcam(
+        gg = gradcam3d_viz._compute_guided_gradcam(
             net, x_batch, tg, stages, stage_names, target_shape, target_cls,
-            cfg.extract_logits_fn, case)["stage0"]
+            cfg.extract_logits_fn, case, return_terms=True)
+        raws["guided_gradcam"] = gg["raw"]["stage0"]
+        decomps["guided_gradcam"] = gg["terms"]["stage0"]
 
         lc = gradcam3d_viz._compute_layercam(
             net, x_batch, stages, stage_names, target_shape, target_cls,

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Occlusion Sensitivity · From Pixels to Patients</title>
   <meta name="description" content="Occlusion sensitivity: blank a cube, measure the malignancy-probability drop. No gradients. Measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=18" />
+  <link rel="stylesheet" href="../styles.css?v=19" />
 </head>
 <body>
   <nav class="chain-top">
@@ -105,6 +105,12 @@
     occ_arr = _upsample_to(occ_arr, target_shape)
     return occ_arr</pre>
         </div>
+        <h3>The computation, one term at a time</h3>
+        <p class="intuition" style="max-width:64ch">Every panel below is an exported
+          intermediate from this very case — no schematics. Step through and watch the
+          matching part of the formula above light up.</p>
+        <div id="stepper-mount"></div>
+
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">
           <li><b>The cube is filled with the per-volume MEAN, not zero.</b> Zero-fill injects a fake black-cube edge that the network reacts to, corrupting the map.</li>
@@ -127,6 +133,17 @@
   <script type="module">
     import { initBench } from "../js/bench.js?v=2";
     initBench("occlusion");
+  </script>
+  <script type="module">
+    import { mountStepper } from "../js/stepper.js?v=1";
+    import { loadJSON } from "../js/data.js?v=4";
+    const el = document.getElementById("stepper-mount");
+    if (el) {
+      try {
+        const man = await loadJSON("../public/data/manifest.json");
+        await mountStepper(el, { method: "occlusion", exampleId: man.examples[0] });
+      } catch (e) { el.remove(); console.error(e); }
+    }
   </script>
   <script src="../js/reveal.js"></script>
   <script type="module">
