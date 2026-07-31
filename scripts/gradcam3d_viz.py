@@ -822,8 +822,25 @@ def _compute_gradcam_decomposed(model, x_batch, stages, stage_names, target_shap
     return {"raw": raw, "terms": terms}
 
 
+def occlusion_intact_probability(logits_two_column, target_cls):
+    """The intact probability on the SAME scale MONAI's occlusion map uses.
+
+    MONAI activates its output with `out.sigmoid() if x.shape[1] == 1 else
+    out.softmax(1)`. Our wrapper presents the single logit z as [-z, +z], so the
+    softmax branch runs and every occluded score is softmax([-z,z])[c], which
+    equals sigmoid(2z) -- not sigmoid(z).
+
+    meta.json's `prob_malignant` is sigmoid(z), so the two are different numbers
+    (measured 0.999116 vs 0.971106 on the lead case). Subtracting the occlusion
+    map from `prob_malignant` would therefore mix two scales and can even yield a
+    negative "occluded probability", so the intact value for occlusion panels
+    has to come from here.
+    """
+    return float(torch.softmax(logits_two_column.reshape(-1)[:2], dim=0)[target_cls])
+
+
 def _compute_occlusion(model, x_batch, target_shape, target_cls,
-                       extract_logits_fn, config, pid):
+                       extract_logits_fn, config, pid, return_terms=False):
     """Occlusion Sensitivity via MONAI."""
     from monai.visualize import OcclusionSensitivity
     device = x_batch.device
@@ -833,6 +850,9 @@ def _compute_occlusion(model, x_batch, target_shape, target_cls,
                                n_batch=config.occ_n_batch)
     occ_map, _ = occ(x_batch, class_idx=target_cls, overlap=config.occ_overlap)
     occ_arr = occ_map[0, 0].cpu().numpy()
+    # Keep the activated per-position probability before the sign flip below;
+    # that field IS the occluded probability and is what the page steps through.
+    occluded_prob = _upsample_to(occ_arr.copy(), target_shape) if return_terms else None
     # MONAI returns the class SCORE with the region occluded, not the drop in
     # score. A high value therefore means "occluding here barely changed the
     # prediction", i.e. the region is UNimportant -- the inverse of every other
@@ -842,6 +862,12 @@ def _compute_occlusion(model, x_batch, target_shape, target_cls,
     occ_arr = -occ_arr
     occ_arr = _upsample_to(occ_arr, target_shape)
     _validate_att_volume(occ_arr, target_shape, "input_resolution", "occlusion", pid)
+    if return_terms:
+        return {"raw": occ_arr,
+                "terms": {"input_resolution": {
+                    "occluded_prob": occluded_prob.astype(np.float32),
+                    "channel": None,
+                }}}
     return occ_arr
 
 

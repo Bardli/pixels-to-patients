@@ -91,6 +91,40 @@ def slice_payload(sl: np.ndarray, prenormalised: bool) -> dict:
             "vmin": vmin, "vmax": vmax}
 
 
+def occlusion_terms(occluded_prob: np.ndarray, prob_intact: float) -> dict:
+    """Turn the occluded-probability field into the three panels the page steps
+    through: the intact score, the drop, and the occluded score.
+
+    MONAI owns the sliding-window loop, so the per-cube probabilities are not
+    computed by us -- but they are exactly what its map holds once you stop
+    treating it as a saliency map. Occluding a region can only lower the score,
+    so H(p) = P(c | x) - P(c | x occluded at p). Derived here rather than in the
+    browser so the numbers sit under the manifest's hash.
+
+    `prob_intact` must come from gradcam3d_viz.occlusion_intact_probability, not
+    from meta.json's prob_malignant: MONAI softmaxes our two-column [-z, +z]
+    form, so its scale is sigmoid(2z) while prob_malignant is sigmoid(z).
+    """
+    if not 0.0 <= prob_intact <= 1.0:
+        raise ValueError(f"prob_intact {prob_intact} is not a probability")
+    lo, hi = float(np.min(occluded_prob)), float(np.max(occluded_prob))
+    if lo < -1e-6 or hi > 1.0 + 1e-6:
+        raise ValueError(
+            f"occluded field spans [{lo:.4f}, {hi:.4f}], which is not in "
+            "probability units -- MONAI's activate=True was likely disabled"
+        )
+    drop = prob_intact - occluded_prob
+    over = float(np.max(drop)) - prob_intact
+    if over > 1e-6:
+        raise ValueError(
+            f"drop max {float(np.max(drop)):.4f} exceeds the intact probability "
+            f"{prob_intact:.4f} by {over:.4f}; the maps are not on one scale"
+        )
+    return {"intact": float(prob_intact),
+            "drop": drop.astype(np.float32),
+            "occluded": occluded_prob.astype(np.float32)}
+
+
 def gray_png(sl: np.ndarray, path: Path) -> None:
     from PIL import Image
     vmin, vmax = float(sl.min()), float(sl.max())
