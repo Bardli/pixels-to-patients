@@ -282,12 +282,15 @@ def main() -> int:
     ap.add_argument("--data-root", type=Path, default=REPO / "data/luna25")
     ap.add_argument("--out", type=Path, default=REPO / "web/public/data")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--checkpoint", type=Path, default=None,
+                    help="path to fold_<N>/checkpoint_best.pth; defaults to "
+                         "artifacts/jsc/fold_3/checkpoint_best.pth")
     args = ap.parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
 
-    pred = jsc_gradcam.build_predictor(args.device)
+    pred = jsc_gradcam.build_predictor(args.device, args.checkpoint)
     net = jsc_gradcam.JSCAdapter(pred.network).eval()
     device = pred.device
 
@@ -411,7 +414,7 @@ def main() -> int:
         "per_example": per_example, "aggregate": aggregate,
     }))
 
-    ckpt = REPO / "artifacts/jsc/model/nnUNetCLSTrainerMTL__nnUNetPlans__3d_fullres/fold_3/checkpoint_best.pth"
+    ckpt = Path(args.checkpoint) if args.checkpoint else REPO / "artifacts/jsc/fold_3/checkpoint_best.pth"
     lock = REPO / "uv.lock"
     (out_root / "manifest.json").write_text(json.dumps({
         "schema": SCHEMA,

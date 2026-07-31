@@ -46,7 +46,17 @@ from segcls_ensemble_infer import SimplePredictor  # noqa: E402
 from batchgenerators.utilities.file_and_folder_operations import join  # noqa: E402
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO  # noqa: E402
 
-MODEL_DIR = "artifacts/jsc/model/nnUNetCLSTrainerMTL__nnUNetPlans__3d_fullres"
+# Canonical layout per docs/jsc-luna25-sources.md: plans.json, dataset.json and
+# dataset_fingerprint.json sit here, the weights in fold_<N>/. That is exactly
+# the shape the official predictor expects for --model_path, so no extra
+# trainer-named directory is needed.
+#
+# Use these two files, NOT the checkpoint's embedded copies and NOT the gated
+# dataset repo's dataset.json: of the four sources only the weights repo's
+# plans.json and dataset.json name the dataset Dataset005_LUNA25. The embedded
+# dataset_json and the gated dataset.json both say Dataset009_LUNA25, and
+# nnU-Net resolves paths through that field.
+MODEL_DIR = "artifacts/jsc"
 
 
 class JSCAdapter(torch.nn.Module):
@@ -66,7 +76,30 @@ class JSCAdapter(torch.nn.Module):
         return self.network(x)
 
 
-def build_predictor(device: str) -> SimplePredictor:
+def build_predictor(device: str, checkpoint: Path | None = None) -> SimplePredictor:
+    """Load the published fold-3 network.
+
+    `checkpoint` points at the .pth itself (e.g. artifacts/jsc/fold_3/
+    checkpoint_best.pth); its grandparent is the model directory and its parent
+    name supplies the fold, so a caller can swap folds without a second flag.
+    """
+    if checkpoint is not None:
+        checkpoint = Path(checkpoint)
+        if not checkpoint.is_file():
+            raise FileNotFoundError(f"checkpoint not found: {checkpoint}")
+        model_dir = checkpoint.parent.parent
+        fold = checkpoint.parent.name.removeprefix("fold_")
+        ckpt_name = checkpoint.name
+    else:
+        model_dir, fold, ckpt_name = REPO / MODEL_DIR, "3", "checkpoint_best.pth"
+    for required in ("plans.json", "dataset.json"):
+        if not (model_dir / required).is_file():
+            raise FileNotFoundError(
+                f"{model_dir / required} missing — the model directory must hold "
+                "plans.json and dataset.json alongside fold_<N>/. See "
+                "docs/jsc-luna25-sources.md."
+            )
+
     dev = torch.device(device, 0) if device != "cpu" else torch.device("cpu")
     pred = SimplePredictor(
         tile_step_size=0.5,
@@ -79,7 +112,7 @@ def build_predictor(device: str) -> SimplePredictor:
         allow_tqdm=False,
     )
     pred.initialize_from_trained_model_folder(
-        str(REPO / MODEL_DIR), use_folds=("3",), checkpoint_name="checkpoint_best.pth"
+        str(model_dir), use_folds=(fold,), checkpoint_name=ckpt_name
     )
     # The official script never loads weights in initialize_...; it loads them
     # per-fold inside inference(). We load explicitly and keep eval().
@@ -150,13 +183,16 @@ def main() -> int:
     ap.add_argument("--data-root", type=Path, default=REPO / "data/luna25")
     ap.add_argument("--out", type=Path, default=REPO / "artifacts/jsc/gradcam_out")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--checkpoint", type=Path, default=None,
+                    help="path to fold_<N>/checkpoint_best.pth; defaults to "
+                         "artifacts/jsc/fold_3/checkpoint_best.pth")
     ap.add_argument("--methods", nargs="+", default=["notgradcam", "truegradcam"])
     args = ap.parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
 
-    pred = build_predictor(args.device)
+    pred = build_predictor(args.device, args.checkpoint)
     net = JSCAdapter(pred.network).eval()
     print(f"[jsc] network ready on {args.device}, TF32 off, TTA off, eval()")
 

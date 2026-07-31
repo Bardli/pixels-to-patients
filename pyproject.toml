@@ -24,3 +24,12 @@ dependencies = [
 # scripts, so uv treats it as an environment manifest only.
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
