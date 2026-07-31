@@ -249,8 +249,8 @@ the site.
 
 ### Model
 
-> [bowang-lab/JSC](https://github.com/bowang-lab/JSC) — joint segmentation and
-> classification for 3D medical images. Commit
+> Ching-Yuan Yu, bowang-lab. [JSC](https://github.com/bowang-lab/JSC) — joint
+> segmentation and classification for 3D medical images. Commit
 > `49511ef01c414014afb7e7a3265d820544bf93cc`, Apache-2.0. Weights from
 > [cyyu96/AutoMSC-Baselines](https://huggingface.co/cyyu96/AutoMSC-Baselines),
 > `Dataset005_LUNA25`, fold 3.
