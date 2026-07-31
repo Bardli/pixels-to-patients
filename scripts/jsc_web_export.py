@@ -125,6 +125,81 @@ def occlusion_terms(occluded_prob: np.ndarray, prob_intact: float) -> dict:
             "occluded": occluded_prob.astype(np.float32)}
 
 
+TAP_NAME = "conv_block"
+TAP_SHAPE = [640, 16, 16, 16]
+# Cap for decomposition slices. The CAM family is already 16x16; the
+# input-resolution methods (Integrated Gradients, occlusion) are 128x128, and
+# four path checkpoints at that size cost 235 KB per case per method -- an order
+# of magnitude over the bundle's budget for something that renders into a 288 px
+# canvas with image-rendering: pixelated. Block-mean to at most 64x64, which is
+# the 4096 values the panel is meant to expose one cell at a time.
+DECOMP_MAX_SIDE = 64
+
+
+def _shrink(sl: np.ndarray, max_side: int = DECOMP_MAX_SIDE) -> np.ndarray:
+    """Block-mean a 2D slice down to at most max_side, by an integer factor."""
+    h, w = sl.shape
+    f = max(1, int(np.ceil(max(h, w) / max_side)))
+    if f == 1:
+        return sl
+    hh, ww = (h // f) * f, (w // f) * f
+    return sl[:hh, :ww].reshape(hh // f, f, ww // f, f).mean(axis=(1, 3))
+
+
+def decomp_payload(terms: dict, z_input: int) -> dict:
+    """One method's computation terms as quantised 2D slices.
+
+    Terms arrive at whichever resolution their method works in -- the CAM family
+    at the 16^3 tap, Integrated Gradients and occlusion at the 64x128x128 input
+    -- so the slice index is rescaled per term instead of assumed. `signed`
+    tells the renderer to centre a diverging scale at zero; without it a large
+    negative would paint like a large positive, which is the very failure the
+    Grad-CAM page is trying to teach.
+    """
+    payload: dict = {"tap": TAP_NAME, "tap_shape": TAP_SHAPE, "terms": {}}
+    for key in ("channel", "alpha", "alpha_negative", "grad_is_constant",
+                "intact", "steps"):
+        if key in terms:
+            v = terms[key]
+            payload[key] = v.item() if hasattr(v, "item") else v
+
+    def add(name: str, vol: np.ndarray) -> None:
+        fz = min(vol.shape[0] - 1, int(round(z_input * vol.shape[0] / 64)))
+        signed = bool(vol.min() < 0.0)
+        p = slice_payload(_shrink(vol[fz]), False)
+        p["signed"] = signed
+        p["feature_z"] = fz
+        p["depth"] = int(vol.shape[0])
+        payload["terms"][name] = p
+
+    for name, vol in terms.items():
+        if isinstance(vol, np.ndarray) and vol.ndim == 3:
+            add(name, vol)
+
+    # Per-channel vectors (alpha across 640 channels, or notGradCAM's channel
+    # means). These are the honest substitute for a gradient panel that would
+    # otherwise be one flat colour: under a globally pooled head the gradient
+    # carries no spatial structure, so the class signal lives in this spread.
+    for name in ("alpha_all", "channel_means"):
+        if name in terms:
+            v = np.asarray(terms[name], dtype=np.float32)
+            payload[name] = {"values": [round(float(u), 8) for u in v],
+                             "vmin": float(v.min()), "vmax": float(v.max()),
+                             "signed": bool(v.min() < 0.0)}
+
+    if "path" in terms:
+        payload["path"] = []
+        for s in terms["path"]:
+            vol = np.asarray(s["map"], dtype=np.float32)
+            fz = min(vol.shape[0] - 1, int(round(z_input * vol.shape[0] / 64)))
+            signed = bool(vol.min() < 0.0)
+            entry = slice_payload(_shrink(vol[fz]), False)
+            entry["signed"] = signed
+            entry["frac"] = float(s["frac"])
+            payload["path"].append(entry)
+    return payload
+
+
 def gray_png(sl: np.ndarray, path: Path) -> None:
     from PIL import Image
     vmin, vmax = float(sl.min()), float(sl.max())
@@ -384,25 +459,54 @@ def main() -> int:
         )
 
         raws: dict[str, np.ndarray] = {}
-        raws["notgradcam"] = gradcam3d_viz._compute_notgradcam(
-            net, x_batch, stages, stage_names, target_shape, case)["stage0"]
+        decomps: dict[str, dict] = {}     # site_key -> terms dict
+
+        ng = gradcam3d_viz._compute_notgradcam(
+            net, x_batch, stages, stage_names, target_shape, case, return_terms=True)
+        raws["notgradcam"] = ng["raw"]["stage0"]
+        decomps["notgradcam"] = ng["terms"]["stage0"]
+
+        # The exported Grad-CAM map stays MONAI's; the hand-written version
+        # supplies terms only. Parity between them is gated at the tap by
+        # tests/test_gradcam_parity.py.
         tg = gradcam3d_viz._compute_truegradcam(
             net, x_batch, stages, stage_names, target_shape, target_cls,
             cfg.extract_logits_fn, case)
         raws["truegradcam"] = tg["stage0"]
+        decomps["gradcam"] = gradcam3d_viz._compute_gradcam_decomposed(
+            net, x_batch, stages, stage_names, target_shape, target_cls,
+            cfg.extract_logits_fn, case)["terms"]["stage0"]
+
         raws["guided_gradcam"] = gradcam3d_viz._compute_guided_gradcam(
             net, x_batch, tg, stages, stage_names, target_shape, target_cls,
             cfg.extract_logits_fn, case)["stage0"]
-        raws["layercam"] = gradcam3d_viz._compute_layercam(
+
+        lc = gradcam3d_viz._compute_layercam(
             net, x_batch, stages, stage_names, target_shape, target_cls,
-            cfg.extract_logits_fn, case)["stage0"]
-        raws["occlusion"] = gradcam3d_viz._compute_occlusion(
-            net, x_batch, target_shape, target_cls, cfg.extract_logits_fn, cfg, case)
-        raws["integrated_gradients"] = gradcam3d_viz._compute_integrated_gradients(
-            net, x_batch, target_shape, target_cls, cfg.extract_logits_fn, cfg, case)
-        raws["integrated_gradcam"] = gradcam3d_viz._compute_integrated_gradcam(
+            cfg.extract_logits_fn, case, return_terms=True)
+        raws["layercam"] = lc["raw"]["stage0"]
+        decomps["layercam"] = lc["terms"]["stage0"]
+
+        oc = gradcam3d_viz._compute_occlusion(
+            net, x_batch, target_shape, target_cls, cfg.extract_logits_fn, cfg,
+            case, return_terms=True)
+        raws["occlusion"] = oc["raw"]
+        p_intact = gradcam3d_viz.occlusion_intact_probability(
+            gradcam3d_viz._as_two_column(cls_out), target_cls)
+        ot = occlusion_terms(oc["terms"]["input_resolution"]["occluded_prob"], p_intact)
+        decomps["occlusion"] = {"channel": None, **ot}
+
+        ig = gradcam3d_viz._compute_integrated_gradients(
+            net, x_batch, target_shape, target_cls, cfg.extract_logits_fn, cfg,
+            case, return_terms=True)
+        raws["integrated_gradients"] = ig["raw"]
+        decomps["integrated_gradients"] = ig["terms"]["input_resolution"]
+
+        igc = gradcam3d_viz._compute_integrated_gradcam(
             net, x_batch, stages, stage_names, target_shape, target_cls,
-            cfg.extract_logits_fn, cfg, case)["stage0"]
+            cfg.extract_logits_fn, cfg, case, return_terms=True)
+        raws["integrated_gradcam"] = igc["raw"]["stage0"]
+        decomps["integrated_gradcam"] = igc["terms"]["stage0"]
 
         ex_metrics = {}
         for site_key, internal in METHOD_KEYS:
@@ -414,6 +518,11 @@ def main() -> int:
             overlay_png(ct_sl, sl, ex_dir / "attributions" / f"{site_key}.png")
             (ex_dir / "attributions" / f"{site_key}.json").write_text(
                 json.dumps(slice_payload(sl, True)))
+
+            terms = decomps.get(site_key)
+            if terms:
+                (ex_dir / "attributions" / f"{site_key}.decomp.json").write_text(
+                    json.dumps(decomp_payload(terms, z)))
 
         meta = {
             "example_id": ex_id, "case_id": case,

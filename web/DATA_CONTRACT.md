@@ -308,6 +308,61 @@ Each `channels[i]` object:
 histogram arrays are truncated with `"..."`; real values are plain numbers,
 not strings — the `"..."` markers exist only in this documentation example.)
 
+## attributions/&lt;method&gt;.decomp.json (v2)
+
+One method's computation terms, so a page can step through the arithmetic rather
+than stopping at the result. **A method with no exportable terms writes no
+`.decomp.json` at all** — never an empty one, so the front end can branch on
+existence.
+
+| Field | Type | Description |
+|---|---|---|
+| `tap` | string | `"conv_block"` — the layer the CAM family reads. |
+| `tap_shape` | `[int,int,int,int]` | `[640,16,16,16]` for a `(64,128,128)` patch. |
+| `terms` | object | `{name: slice payload}`; see the per-method table below. |
+| `channel` | int \| null | Which channel the single-channel terms belong to, chosen from the data. `null` for methods with no per-channel term. |
+| `alpha` | float | That channel's pooled weight (CAM family only). |
+| `alpha_all` | object | `{values, vmin, vmax, signed}` — every channel's weight. |
+| `alpha_negative` | int | How many of those weights are negative. |
+| `grad_is_constant` | bool | True when the gradient carries no spatial structure (see below). |
+| `channel_means` | object | notGradCAM only: each channel's mean activation. |
+| `intact` | float | Occlusion only: the intact probability, on MONAI's scale. |
+| `path` | list[object] | Integration methods only: slice payloads each with an extra `frac`, ascending, last one the finished integral. |
+| `steps` | int | Integration methods only: the step count actually used. |
+
+Every slice payload here carries three fields beyond the base shape:
+`signed` (centre a diverging scale at zero), `feature_z` (the slice index within
+that term's own depth) and `depth` (that depth), because terms live at different
+resolutions — the CAM family at the `16³` tap, Integrated Gradients and occlusion
+at the `64×128×128` input.
+
+**Slices are capped at 64×64** by block-mean. Four Integrated-Gradients path
+checkpoints at full 128×128 cost 235 KB per case per method, an order of
+magnitude over budget for something that renders into a 288 px canvas with
+`image-rendering: pixelated`. Measured after the cap: 152 KB per case, ~760 KB
+across the five exemplars.
+
+| Method | Terms |
+|---|---|
+| `notgradcam` | `activation`, `relu` — **no gradient term**, deliberately: its absence is that page's argument |
+| `gradcam` | `activation`, `gradient`, `weighted`, `summed`, `relu` |
+| `layercam` | `activation`, `hadamard`, `relu` |
+| `occlusion` | `drop`, `occluded` (+ `intact` scalar) |
+| `integrated_gradients` | `path` only |
+| `integrated_gradcam` | `path` only |
+| `guided_gradcam` | none — no `.decomp.json` is written |
+
+**Read `grad_is_constant` before designing a gradient panel.** On JSC the tap is
+followed by `AdaptiveAvgPool3d`, so ∂y/∂A[k,z,y,x] = (1/N)·∂y/∂pooledₖ for every
+voxel: the per-channel spatial std is exactly 0.0 across all 640 channels.
+Two consequences the renderer must not paper over — `gradient` is one uniform
+value rather than a texture, and `weighted` is `activation` times a scalar, so
+after per-panel min-max it is pixel-identical to `activation` (measured max diff
+6.0e-08). That is why `alpha_all` ships: the class-specific signal lives in the
+spread of the weights across channels, not in any one panel's texture, and on the
+lead case 415 of 640 are negative — the direct reason the closing ReLU can erase
+part of the map.
+
 ## Quantisation convention
 
 Slice `values` are always a flat row-major list of ints in `0`–`255`.

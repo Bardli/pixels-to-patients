@@ -9,7 +9,7 @@
    returning visitor keeps the previous JSON and reads numbers the rest of the
    page no longer agrees with -- exactly how a corrected seg_head param count
    stayed invisible. Same ?v= convention the css and js imports use. */
-const BUNDLE_V = "3";
+const BUNDLE_V = "4";
 
 export async function loadJSON(url) {
   const res = await fetch(url + (url.includes("?") ? "&" : "?") + "v=" + BUNDLE_V);
