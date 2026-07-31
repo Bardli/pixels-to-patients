@@ -78,7 +78,7 @@ export function initBench(method, root = "../public/data") {
   });
   els.viewer.addEventListener("pointerleave", () => {
     els.viewer.classList.remove("hot");
-    els.readout.innerHTML = `<span class="k">hover the scan to read a voxel</span>`;
+    els.readout.innerHTML = `<span class="k">move over the scan to read a voxel</span>`;
   });
 
   // Rebuild the bench into a side-by-side comparison: [ground truth | attribution].

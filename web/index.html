@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grad-CAM on CT — From Pixels to Patients</title>
+  <title>From Pixels to Patients: Attribution Methods on Lung CT</title>
   <meta name="description" content="An implementation-first tour of seven attribution methods for medical-imaging CNNs, measured on real lung CT. MICCAI Educational Challenge 2026." />
   <link rel="stylesheet" href="styles.css?v=16" />
   <style>
@@ -25,7 +25,7 @@
       <div class="stagger">
         <p class="label eyeline">MICCAI Educational Challenge 2026 · From Pixels to Patients</p>
         <h1>Is the network looking at the <em>nodule</em>&nbsp;— or an artifact?</h1>
-        <p class="lede">A hands-on tour of seven attribution methods, implemented from scratch and measured on real lung&#8209;CT. Hover the layers, step through the computation, and see&nbsp;— quantitatively&nbsp;— where each heat&#8209;map actually lands.</p>
+        <p class="lede">Seven interpretability methods answer that question. This tour works through them one at a time on a single screening&#8209;CT nodule, scored for malignancy by a published model, and ends by scoring all seven against the radiologist's mask.</p>
         <div class="cta-row">
           <a class="btn primary" href="methods/notgradcam.html">Start the tour <span class="arrow">→</span></a>
         </div>
@@ -62,21 +62,21 @@
         <span class="rule" aria-hidden="true"></span>
       </div>
       <p class="lede reveal" style="margin-bottom:1.6rem; max-width:72ch">
-        One lung&#8209;CT patch — the scan above — is the running example for this entire piece, a
-        screening&#8209;CT nodule crop from <b>LUNA25</b> (<span class="mono">FLARE&#8209;AutoMSC
-        Dataset005</span>) scored for <b>malignancy</b> by the published
-        <b>JSC</b> joint segmentation + classification baseline. Watch it flow through the network — the
-        <b>real activation maps</b> at every layer. <b>Hover any layer</b> to enlarge it and unfold its channels.
+        The scan above is the running example for the whole tour: a screening&#8209;CT nodule crop from
+        <b>LUNA25</b> (<span class="mono">FLARE&#8209;AutoMSC Dataset005</span>), scored for
+        <b>malignancy</b> by the published <b>JSC</b> joint segmentation + classification baseline.
+        Every layer below shows its <b>real activation maps</b>, not a schematic.
+        <b>Point at any layer</b> to enlarge it and unfold its channels.
       </p>
       <div class="reveal" id="flow-mount"></div>
-      <p class="figcap reveal" style="margin-top:1.1rem">Real activations for case <span class="mono">203125_1</span> · turbo-coloured, contrast-stretched per channel · hover a layer to expand its top channels.</p>
+      <p class="figcap reveal" style="margin-top:1.1rem">Real activations for case <span class="mono">203125_1</span> · turbo-coloured, contrast-stretched per channel · point at a layer to expand its top channels.</p>
     </div>
   </section>
 
   <section style="border-top:none; padding-top:0">
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The architecture</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:62ch; margin-bottom:1.6rem">Each block is a layer, drawn to scale: the <b>face</b> is the spatial resolution and the <b>depth</b> is the channel count — so you watch resolution shrink as channels grow. <b>Drag to orbit.</b></p>
+      <p class="intuition reveal" style="max-width:62ch; margin-bottom:1.6rem">Each block is a layer, drawn to scale: the <b>face</b> is the spatial resolution, the <b>depth</b> is the channel count. Resolution shrinks as channels grow. <b>Drag to orbit.</b></p>
       <div class="reveal" id="arch-mount"></div>
       <p class="figcap" style="margin-top:0.9rem">Real <span class="mono">PlainConvUNet</span> + FPN classification head from the published JSC fold&#8209;3 checkpoint · shapes are channels×D×H×W · click a stage to inspect its activations below</p>
     </div>
@@ -85,7 +85,7 @@
   <section id="forward">
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The forward pass, in 3D</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:64ch; margin-bottom:1.8rem">Walk one CT volume through the network, stage by stage — hit <b>Play</b>, use the arrows, or click a stage on the rail. <b>Drag the scene to orbit it.</b> The data is real — each plane is an exported feature-map channel, turbo-coloured and contrast-stretched per channel so the sparse post-ReLU activations show. Watch the <span class="mono">conv_block</span> tap light up: that is where all seven attribution methods read.</p>
+      <p class="intuition reveal" style="max-width:64ch; margin-bottom:1.8rem">Walk one CT volume through the network, stage by stage. Hit <b>Play</b> to run it, or step through with the arrows and the stage rail. <b>Drag the scene to orbit it.</b> Every plane is an exported feature-map channel, turbo-coloured and contrast-stretched per channel so the sparse post-ReLU activations show. Watch the <span class="mono">conv_block</span> tap light up: that is where all seven methods read.</p>
       <div class="pipe" id="pipe">
         <div class="pipe-sticky">
           <div class="stage3d" id="pipeStage" role="img" aria-label="3D visualisation of a CT volume passing through the convolutional network; scroll to advance through the stages, drag to rotate">
@@ -120,7 +120,7 @@
           <p class="label" style="margin-bottom:0.8rem">Activation distribution</p>
           <div class="hist reveal" id="hist"></div>
           <div class="hist-ax"><span id="hmin">–</span><span id="hmax">–</span></div>
-          <p class="intuition" style="font-size:0.95rem; margin-top:1.2rem; max-width:46ch">Most activations sit near zero after ReLU — the long tail on the right is where the feature actually fires. Malignant cases push more mass into that tail at the <span class="mono">conv_block</span> tap.</p>
+          <p class="intuition" style="font-size:0.95rem; margin-top:1.2rem; max-width:46ch">Most activations sit near zero after ReLU. The long tail on the right is where the feature fires. Malignant cases push more mass into that tail at the <span class="mono">conv_block</span> tap.</p>
         </div>
       </div>
     </div>
@@ -133,7 +133,7 @@
       <hr class="heatrule" style="margin-bottom:2rem" />
       <div class="foot-grid">
         <p class="disclosure">
-          Grad-CAM on CT — an educational submission for the MICCAI Educational Challenge 2026.<br />
+          From Pixels to Patients, an educational submission for the MICCAI Educational Challenge 2026.<br />
           Figures and metrics are generated by the accompanying open-source code and hashed for provenance.<br />
           AI-use disclosure: portions of this project were built with the assistance of an AI coding assistant (Claude).
         </p>

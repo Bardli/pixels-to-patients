@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mean activation map — Grad-CAM on CT</title>
-  <meta name="description" content="Grad-CAM: gradient-weighted class activation mapping, implemented and measured on real lung CT." />
+  <title>Mean activation · From Pixels to Patients</title>
+  <meta name="description" content="Mean activation: the gradient-free, class-free baseline every CAM method has to beat, measured on real lung CT." />
   <link rel="stylesheet" href="../styles.css?v=16" />
 </head>
 <body>
@@ -17,7 +17,7 @@
     <div class="container">
       <p class="label kicker">Method 01 / 07 · class-agnostic · baseline</p>
       <h1>Mean activation map</h1>
-      <p class="intuition">The simplest possible map — average the feature-map channels at the CAM layer and upsample. No gradients, no target class. A baseline that shows what the class-discriminative methods actually <em>add</em>.</p>
+      <p class="intuition">The simplest possible map: average the feature-map channels at the CAM layer and upsample. No gradients, no target class. It is the baseline that shows what the class-discriminative methods <em>add</em>.</p>
     </div>
   </div>
 
@@ -27,11 +27,11 @@
       <div class="bench">
         <div>
           <div class="tabs" id="tabs" role="tablist" aria-label="Example case"></div>
-          <div class="viewer" id="viewer" aria-label="CT slice with the attribution heat-map; hover to read voxel values">
+          <div class="viewer" id="viewer" aria-label="CT slice with the attribution heat-map; move the pointer over it to read voxel values">
             <canvas id="ct"></canvas><canvas id="heat"></canvas><div class="crosshair" id="cross"></div>
           </div>
           <div class="legend"><span>cold</span><span class="bar"></span><span>hot</span></div>
-          <div class="readout" id="readout"><span class="k">hover the scan to read a voxel</span></div>
+          <div class="readout" id="readout"><span class="k">move over the scan to read a voxel</span></div>
           <p class="figcap"><b>Fig.</b> axial slice · CT grayscale with the attribution overlaid · real 128×128 voxels (64×128×128 patch)</p>
         </div>
         <div>
@@ -48,10 +48,10 @@
   <section>
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>The channels being averaged</h2><span class="rule"></span></div>
-      <p class="intuition reveal" style="max-width:66ch">All <b id="chan-total">—</b> feature-map channels at the <span class="mono">conv_block</span> CAM tap for case <span class="mono">203125_1</span> — the exact tensors this baseline averages. Rather than show them one by one, here is their distribution.</p>
-      <p class="intuition reveal" style="max-width:66ch; margin-top:0.8rem"><b>And here is the surprise.</b> On a small toy CNN almost every channel goes silent — a filter that doesn't respond outputs all zeros after the ReLU. A real trained backbone does neither that nor the opposite: only <b id="chan-zeroch">—</b> channel is exactly zero, yet the means split into <b>two clusters two orders of magnitude apart</b>. The lower half of the channels contributes just <b id="chan-halfshare">—</b> of the average. Sparsity is real, but it lives at the <em>voxel</em> level — <b id="chan-zero">—</b> of the individual activations in this tensor are exactly zero. That is precisely why averaging is a weak localiser: the handful of channels that respond to <em>this</em> lesion get divided by <span id="chan-total3" class="mono">640</span>.</p>
+      <p class="intuition reveal" style="max-width:66ch">All <b id="chan-total">—</b> feature-map channels at the <span class="mono">conv_block</span> CAM tap for case <span class="mono">203125_1</span>, the exact tensors this baseline averages. Rather than show them one by one, here is their distribution.</p>
+      <p class="intuition reveal" style="max-width:66ch; margin-top:0.8rem"><b>And here is the surprise.</b> On a small toy CNN almost every channel goes silent, because a filter that doesn't respond outputs all zeros after the ReLU. A real trained backbone does neither that nor the opposite: only <b id="chan-zeroch">—</b> channel is exactly zero, yet the means split into <b>two clusters two orders of magnitude apart</b>. The lower half of the channels contributes just <b id="chan-halfshare">—</b> of the average. Sparsity is real, but it lives at the <em>voxel</em> level: <b id="chan-zero">—</b> of the individual activations in this tensor are exactly zero. That is why averaging is a weak localiser: the handful of channels that respond to <em>this</em> lesion get divided by <span id="chan-total3" class="mono">640</span>.</p>
       <div class="chandist reveal" id="channels-mount"></div>
-      <p class="figcap reveal">Distribution of mean activation across all <span id="chan-total4" class="mono">640</span> <span class="mono">conv_block</span> channels for case <span class="mono">203125_1</span>. Log x — the means span three orders of magnitude, so a linear axis would collapse two thirds of the channels into a single bar. Channels that are exactly zero cannot sit on a log axis; they are annotated at the left of the axis break rather than drawn as a bar, since one channel against a 282-tall mode would be a sub-pixel sliver. Hover a bar for its range and count, or open the table view; individual channel slices are on the <a href="../index.html#layers">network page</a>.</p>
+      <p class="figcap reveal">Distribution of mean activation across all <span id="chan-total4" class="mono">640</span> <span class="mono">conv_block</span> channels for case <span class="mono">203125_1</span>. Log x, because the means span three orders of magnitude and a linear axis would collapse two thirds of the channels into a single bar. Channels that are exactly zero cannot sit on a log axis; they are annotated at the left of the axis break rather than drawn as a bar, since one channel against a 282-tall mode would be a sub-pixel sliver. Point at a bar for its range and count, or open the table view; individual channel slices are on the <a href="../index.html#layers">network page</a>.</p>
     </div>
   </section>
 
@@ -59,7 +59,7 @@
     <div class="container">
       <div class="sec-head reveal"><span class="num">▸</span><h2>How it works</h2><span class="rule"></span></div>
       <div class="prose reveal">
-        <p>The mean activation map is the honest baseline: no gradients and no target class — just the mean of the feature-map channels at the tap layer, upsampled. It shows what the network is active on, before any class-discriminative signal is added.</p>
+        <p>The mean activation map is the honest baseline: no gradients and no target class, just the mean of the feature-map channels at the tap layer, upsampled. It shows what the network is active on, before any class-discriminative signal is added.</p>
         <h3>The math</h3>
         <div class="mathblock">
           <div class="math-line">
@@ -80,11 +80,11 @@
         <ul class="math-where">
           <li data-sym="M"><b>M(x)</b> — the saliency map produced for the input volume <b>x</b></li>
           <li data-sym="A"><b>A<sup>k</sup></b> — the k-th feature-map channel at the <span class="mono">conv_block</span> tap (640 channels)</li>
-          <li data-sym="mean"><b>(1/K) Σ<sub>k</sub></b> — the plain mean over all <b>K</b> = 640 channels; no gradients and no class — that is the whole point of this baseline</li>
+          <li data-sym="mean"><b>(1/K) Σ<sub>k</sub></b> — the plain mean over all <b>K</b> = 640 channels; no gradients and no class, which is the whole point of this baseline</li>
           <li data-sym="up"><b>Up</b> — trilinear-upsample the mean map back to the input volume size</li>
         </ul>
         <h3>The implementation</h3>
-        <p>The real function from the codebase — nothing hidden. It averages the 640 <span class="mono">conv_block</span> feature channels; note that no target class is passed in at all.</p>
+        <p>Verbatim from the codebase. It averages the 640 <span class="mono">conv_block</span> feature channels; note that no target class is passed in at all.</p>
         <div class="codeblock">
           <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_notgradcam()</span></div>
 <pre>def _compute_notgradcam(model, x_batch, stages, stage_names,
@@ -109,7 +109,7 @@
         <ol class="gotchas">
           <li><b>Class-agnostic</b> — no target class is passed at all; the map is identical whichever class you ask about.</li>
           <li><b>No backward pass</b> — pure forward activations, <span class="mono">torch.no_grad()</span>.</li>
-          <li>It answers "where is the network active?", not "where for THIS class?" — the honest baseline against which Grad-CAM's value is judged.</li>
+          <li>It answers "where is the network active?", not "where for THIS class?". That makes it the honest baseline against which Grad-CAM's value is judged.</li>
         </ol>
       </div>
     </div>
@@ -120,7 +120,7 @@
   <footer>
     <div class="container">
       <hr class="heatrule" style="margin-bottom:1.6rem" />
-      <p class="disclosure">Heat-maps and metrics generated by <span class="mono">gradcam-repro web-export</span> and hashed in <span class="mono">manifest.json</span>. AI-use disclosure: built with the assistance of an AI coding assistant (Claude).</p>
+      <p class="disclosure">Heat-maps and metrics generated by <span class="mono">scripts/jsc_web_export.py</span> and hashed in <span class="mono">manifest.json</span>. AI-use disclosure: built with the assistance of an AI coding assistant (Claude).</p>
     </div>
   </footer>
 

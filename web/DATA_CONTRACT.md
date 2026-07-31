@@ -10,7 +10,7 @@
 > | `logits` is length **1**, not 2; `pred_label` is `logit > 0`, not `argmax` | JSC's head emits a single logit for binary tasks |
 > | `model_graph.json` nodes are `input, encoder, fpn, conv_block, pool, classifier, logits, seg_head`; `cam_tap` is `"conv_block"` | Real PlainConvUNet + FPN path, not 3 toy conv stages |
 > | New `examples/<id>/pred_mask_slice.png` | JSC segments as well as classifies, so its own predicted mask is an independent check on localisation. The toy CNN had no such output. |
-> | New metric `enrichment` = `mass_in_gt / gt_volume_fraction`; **replaces `mass_in_gt` as the headline** | Real nodules span 0.02–0.5% of the volume, so raw mass collapses to ~0.00x and stops being comparable between a small and a large lesion. A uniform heat-map scores exactly 1.0. |
+> | New metric `enrichment` = `mass_in_gt / gt_volume_fraction`; **replaces `mass_in_gt` as the headline** | The nodules here span 0.006% to 2.2% of the volume, so raw mass collapses to ~0.00x and stops being comparable between a small and a large lesion. A uniform heat-map scores exactly 1.0. |
 > | New `meta.json` fields: `prob_malignant`, `gt_voxels`, `gt_volume_fraction`, `pred_mask_voxels`, `seg_dice`, `outcome` | Needed to select and label success/failure exemplars |
 > | New `manifest.json` fields: `model`, `deviations` | Records the published checkpoint's identity and every deliberate departure from the official inference script |
 > | Slices are **128×128** | Patch size is `(64,128,128)`, not 32³ |
@@ -64,7 +64,7 @@ pretty-printed file in the bundle).
 |---|---|---|
 | `schema` | string | Always `"gradcam-repro.web-bundle.v1"`. |
 | `generated_at` | string | ISO-8601 UTC timestamp passed in by the CLI at export time. |
-| `generated_by` | string | Fixed literal `"uv run gradcam-repro web-export"` (not the actual invoked argv). |
+| `generated_by` | string | Fixed literal `"uv run scripts/jsc_web_export.py"` (not the actual invoked argv). |
 | `checkpoint` | object | `{path: string, sha256: string}` — checkpoint path exactly as passed on the CLI (may be relative), and its full-file SHA-256 hex digest. |
 | `data_cache` | object | `{path: string, sha256: string}` — same shape, for the preprocessed dataset cache. |
 | `uv_lock_sha256` | string \| null | SHA-256 hex digest of `uv.lock` resolved relative to the process CWD; `null` if that file does not exist. |
@@ -78,7 +78,7 @@ pretty-printed file in the bundle).
 {
   "schema": "gradcam-repro.web-bundle.v1",
   "generated_at": "2026-07-09T00:00:00+00:00",
-  "generated_by": "uv run gradcam-repro web-export",
+  "generated_by": "uv run scripts/jsc_web_export.py",
   "checkpoint": {
     "path": "artifacts/real_ct/real_ct_presence_cnn_32.pt",
     "sha256": "9f2b7a5c1e6d4f803a2b5c7e9f1a3d6c8b0e2f4a6c8e0b2d4f6a8c0e2f4a6c81"

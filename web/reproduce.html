@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Reproduce it — Grad-CAM on CT</title>
+  <title>Reproduce it · From Pixels to Patients</title>
   <meta name="description" content="The exact pipeline to reproduce the experiment — from gated LUNA25 screening CT to the published JSC malignancy model, the seven attribution maps, and their scores against the real nodule mask." />
   <link rel="stylesheet" href="styles.css?v=16" />
 </head>
@@ -32,13 +32,13 @@
 <pre>uv sync</pre></div>
 
         <h3>2 · Data</h3>
-        <p>The fold&#8209;3 validation split of <b>FLARE&#8209;AutoMSC</b> <span class="mono">Dataset005_LUNA25</span> — 1,289 screening&#8209;CT nodule crops with malignancy labels. The dataset is gated on Hugging Face, so access is requested there; nothing is redistributed here:</p>
+        <p>The fold&#8209;3 validation split of <b>FLARE&#8209;AutoMSC</b> <span class="mono">Dataset005_LUNA25</span>: 1,289 screening&#8209;CT nodule crops with malignancy labels. The dataset is gated on Hugging Face, so access is requested there; nothing is redistributed here:</p>
         <div class="codeblock"><div class="cap"><span>shell</span><span>2 · data</span></div>
 <pre>python scripts/download_luna25_fold3.py --fold 3</pre></div>
         <p style="font-family:var(--mono); font-size:0.8rem; color:var(--ink-faint); margin:0.4rem 0 0">→ data/luna25/{imagesTr,labelsTr}/ · 2,578 files · 1,770 MB · per-file SHA-256 in artifacts/jsc/fold3_val_manifest.csv</p>
 
         <h3>3 · Model</h3>
-        <p>No training step: this uses the <b>published</b> JSC fold&#8209;3 checkpoint — the FLARE26 AutoMSC joint segmentation + classification baseline — laid out the way its official inference script expects:</p>
+        <p>No training step: this uses the <b>published</b> JSC fold&#8209;3 checkpoint (the FLARE26 AutoMSC joint segmentation + classification baseline), laid out the way its official inference script expects:</p>
         <div class="codeblock"><div class="cap"><span>path</span><span>3 · model</span></div>
 <pre>artifacts/jsc/model/nnUNetCLSTrainerMTL__nnUNetPlans__3d_fullres/
 ├── dataset.json
@@ -53,21 +53,21 @@
   --cases 203125_1_19990102 207347_1_20010102 100438_5_20010102 \
           100471_3_20000102 134082_1_19990102</pre></div>
         <p style="font-family:var(--mono); font-size:0.8rem; color:var(--ink-faint); margin:0.4rem 0 0">→ web/public/data/ · manifest.json · benchmark.json · model_graph.json · examples/&lt;id&gt;/</p>
-        <p style="margin-top:1rem">Each map is scored against the ground-truth mask with three metrics — the numbers you saw on the method pages and the compare board:</p>
+        <p style="margin-top:1rem">Each map is scored against the ground-truth mask with three metrics, the numbers you saw on the method pages and the compare board:</p>
         <ul style="padding-left:1.3rem; margin:0.6rem 0 0; color:var(--ink-dim); font-size:0.95rem">
-          <li style="margin-bottom:0.4rem"><span class="mono">enrichment</span> — <b>the headline number.</b> <span class="mono">mass_in_gt</span> ÷ the mask's volume fraction. A uniform heat-map scores exactly <b>1.0</b>; above 1.0 means the heat really is concentrated on the lesion. Real nodules occupy 0.02–0.5% of the volume, so raw mass collapses toward zero and stops being comparable between a small nodule and a large one — enrichment is.</li>
+          <li style="margin-bottom:0.4rem"><span class="mono">enrichment</span> — <b>the headline number.</b> <span class="mono">mass_in_gt</span> ÷ the mask's volume fraction. A uniform heat-map scores exactly <b>1.0</b>; above 1.0 means the heat is concentrated on the lesion. The nodules here span 0.006% to 2.2% of the volume, so raw mass collapses toward zero and stops being comparable between a small nodule and a large one. Enrichment stays comparable.</li>
           <li style="margin-bottom:0.4rem"><span class="mono">mass_in_gt</span> — share of the attribution mass inside the mask. Kept as a raw diagnostic, no longer headlined.</li>
           <li style="margin-bottom:0.4rem"><span class="mono">inside_outside_ratio</span> — mean heat inside the mask ÷ mean heat outside</li>
           <li style="margin-bottom:0.4rem"><span class="mono">pointing_acc</span> — whether the single hottest voxel lands inside the mask</li>
-          <li><span class="mono">seg_dice</span> — Dice of the model's <em>own</em> predicted nodule mask against ground truth. JSC segments as well as classifies, so its explicit output is an independent check on where it thinks the lesion is — something a classifier-only model cannot offer.</li>
+          <li><span class="mono">seg_dice</span> — Dice of the model's <em>own</em> predicted nodule mask against ground truth. JSC segments as well as classifies, so its explicit output is an independent check on where it thinks the lesion is, which a classifier-only model cannot offer.</li>
         </ul>
         <p style="margin-top:1rem"><em>Deliberate deviations from the official inference script,</em> each of which would otherwise corrupt the attribution: test&#8209;time augmentation is <b>off</b> (mirroring averages eight flipped branches, so gradients would live in flipped coordinate frames); the network runs in <span class="mono">eval()</span>, not the script's <span class="mono">.train()</span>, whose <span class="mono">Dropout(0.5)</span> makes every run non&#8209;reproducible; geometric resampling is <b>skipped</b>, because LUNA25 ships pre&#8209;cropped to the model's exact <span class="mono">(64,128,128)</span> patch and resampling would put image and mask in different frames; and TF32 is disabled so CUDA stays numerically comparable to CPU.</p>
 
         <h3>Provenance</h3>
-        <p>Every run hashes the SHA-256 of the checkpoint, the data cache, and <span class="mono">uv.lock</span>, together with the git commit that produced it — so any number in this tour traces back to the exact inputs that made it. No figure is hand-drawn. Frozen schema: <a href="DATA_CONTRACT.md">DATA_CONTRACT.md</a>.</p>
+        <p>Every run hashes the SHA-256 of the checkpoint, the data cache, and <span class="mono">uv.lock</span>, together with the git commit that produced it, so any number in this tour traces back to the exact inputs that made it. No figure is hand-drawn. Frozen schema: <a href="DATA_CONTRACT.md">DATA_CONTRACT.md</a>.</p>
 
         <h3 style="margin-top:2.2rem; color:var(--ink-faint)">Rebuild this website (optional)</h3>
-        <p style="color:var(--ink-dim); font-size:0.95rem">This site is just a static view of that experiment. To regenerate its data bundle and preview it locally: <span class="mono">uv run gradcam-repro web-export --data … --checkpoint … --out web/public/data</span>, then serve <span class="mono">web/</span> over http (e.g. <span class="mono">python -m http.server</span>) — opening <span class="mono">index.html</span> via <span class="mono">file://</span> blocks the data <span class="mono">fetch()</span>.</p>
+        <p style="color:var(--ink-dim); font-size:0.95rem">This site is just a static view of that experiment. To regenerate its data bundle and preview it locally: <span class="mono">uv run scripts/jsc_web_export.py --data … --checkpoint … --out web/public/data</span>, then serve <span class="mono">web/</span> over http (e.g. <span class="mono">python -m http.server</span>). Opening <span class="mono">index.html</span> via <span class="mono">file://</span> blocks the data <span class="mono">fetch()</span>.</p>
       </div>
     </div>
   </section>
@@ -79,8 +79,8 @@
         <p>An implementation-first tour of attribution methods for medical-imaging CNNs, built for the MICCAI Educational Challenge 2026 (<em>"From Pixels to Patients"</em>).</p>
 
         <h3>The task</h3>
-        <p>This tour runs the seven attribution methods against a <b>published medical model</b> — the JSC FLARE26 AutoMSC joint segmentation + classification baseline — on <b>LUNA25</b> screening&#8209;CT nodule crops, and scores every heat&#8209;map against the real nodule segmentation mask rather than a hand&#8209;drawn region of interest. Nothing here is trained for the occasion: the checkpoint is the authors' own fold&#8209;3 release, whose reported validation AUROC is <span class="mono">0.8875</span>.</p>
-        <p>Why it matters: a model can be right for the wrong reason. A classifier can reach high accuracy while keying off scanner artifacts, patient positioning, or image borders instead of the lesion itself. Attribution, checked against honest quantitative metrics rather than eyeballed heat&#8209;maps, is how you find out whether the network actually localises the nodule. Because JSC also <em>segments</em>, its own predicted mask gives a second, independent read on where it thinks the lesion is.</p>
+        <p>This tour runs the seven attribution methods against a <b>published medical model</b> (the JSC FLARE26 AutoMSC joint segmentation + classification baseline) on <b>LUNA25</b> screening&#8209;CT nodule crops, and scores every heat&#8209;map against the real nodule segmentation mask rather than a hand&#8209;drawn region of interest. Nothing here is trained for the occasion: the checkpoint is the authors' own fold&#8209;3 release, whose reported validation AUROC is <span class="mono">0.8875</span>.</p>
+        <p>Why it matters: a model can be right for the wrong reason. A classifier can reach high accuracy while keying off scanner artifacts, patient positioning, or image borders instead of the lesion itself. Attribution, checked against honest quantitative metrics rather than eyeballed heat&#8209;maps, is how you find out whether the network localises the nodule. Because JSC also <em>segments</em>, its own predicted mask gives a second, independent read on where it thinks the lesion is.</p>
 
         <h3>References</h3>
         <ul style="padding-left:1.3rem; margin:1rem 0 1.3rem; color:var(--ink-2)">
@@ -89,16 +89,17 @@
           <li style="margin-bottom:0.5rem"><b>LayerCAM</b> — Jiang et al., IEEE TIP 2021</li>
           <li style="margin-bottom:0.5rem"><b>Integrated Gradients</b> — Sundararajan et al., ICML 2017</li>
           <li style="margin-bottom:0.5rem"><b>Occlusion</b> — Zeiler &amp; Fergus, ECCV 2014</li>
+          <li style="margin-bottom:0.5rem"><b>Integrated Grad-CAM</b> — Sattarzadeh et al., ICASSP 2021</li>
+          <li style="margin-bottom:0.5rem"><b>nnU-Net</b> — Isensee et al., <em>Nature Methods</em> 18:203–211, 2021</li>
           <li style="margin-bottom:0.5rem"><b>LUNA25 challenge</b> — Peeters D, Obreja B, Antonissen N, Jacobs C. <em>Benchmarking of Artificial Intelligence and Radiologists for Lung Cancer Screening in CT.</em> MICCAI 2025</li>
           <li><b>JSC / FLARE&#8209;AutoMSC baseline</b> — bowang&#8209;lab, commit <span class="mono">49511ef</span></li>
         </ul>
-        <p><em>Citations to be verified against primary sources before final submission.</em></p>
 
         <h3>Data &amp; license</h3>
         <p>The LUNA25 imaging data is <b>not</b> redistributed on this site; it is gated on Hugging Face as <span class="mono">FLARE&#8209;MedFM/FLARE&#8209;AutoMSC</span> and access is granted there. The dataset is licensed <b>CC BY 4.0</b>. Only small, derived, de&#8209;identified CT patches and figures generated from that data are shown here.</p>
 
         <h3>AI-use disclosure</h3>
-        <p>Portions of this project — both the analysis code and this website — were built with the assistance of an AI coding assistant (Claude), as permitted by the challenge rules. All figures and metrics shown here are generated by the accompanying open-source code, not hand-drawn or hand-edited.</p>
+        <p>Portions of this project, both the analysis code and this website, were built with the assistance of an AI coding assistant (Claude), as permitted by the challenge rules. All figures and metrics shown here are generated by the accompanying open-source code, not hand-drawn or hand-edited.</p>
       </div>
     </div>
   </section>
@@ -109,11 +110,11 @@
       <div class="buildnote reveal">
         <div class="item">
           <b>Real data</b>
-          <p>LUNA25 screening&#8209;CT nodule crops (<span class="mono">FLARE&#8209;AutoMSC Dataset005</span>), scored by a published model — not one trained for this tour.</p>
+          <p>LUNA25 screening&#8209;CT nodule crops (<span class="mono">FLARE&#8209;AutoMSC Dataset005</span>), scored by a published model rather than one trained for this tour.</p>
         </div>
         <div class="item">
           <b>Implementation-first</b>
-          <p>Every method is real, readable code — not a black box. The non-obvious gotchas that make it work are called out.</p>
+          <p>Every method is real, readable code, not a black box. The non-obvious gotchas that make it work are called out.</p>
         </div>
         <div class="item">
           <b>Hashed &amp; reproducible</b>
