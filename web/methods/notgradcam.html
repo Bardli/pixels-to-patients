@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mean activation · From Pixels to Patients</title>
   <meta name="description" content="Mean activation: the gradient-free, class-free baseline every CAM method has to beat, measured on real lung CT." />
-  <link rel="stylesheet" href="../styles.css?v=16" />
+  <link rel="stylesheet" href="../styles.css?v=17" />
 </head>
 <body>
   <nav class="chain-top">
-    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <a class="brand" href="../index.html"><span class="mark" aria-hidden="true"></span><b>PIXELS</b><span>/ PATIENTS</span></a>
     <div class="chain-rail" data-chain-rail></div>
   </nav>
 
@@ -129,7 +129,7 @@
     initBench("notgradcam");
   </script>
   <script type="module">
-    import { loadJSON } from "../js/data.js?v=2";
+    import { loadJSON } from "../js/data.js?v=3";
     import { renderChannelDistribution } from "../js/chandist.js?v=2";
     (async () => {
       const manifest = await loadJSON("../public/data/manifest.json");

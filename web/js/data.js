@@ -4,8 +4,15 @@
    (see web/DATA_CONTRACT.md).
    ============================================================ */
 
+/* Data-bundle version. BUMP THIS on every re-export of web/public/data.
+   GitHub Pages serves the bundle with caching headers, so without it a
+   returning visitor keeps the previous JSON and reads numbers the rest of the
+   page no longer agrees with -- exactly how a corrected seg_head param count
+   stayed invisible. Same ?v= convention the css and js imports use. */
+const BUNDLE_V = "3";
+
 export async function loadJSON(url) {
-  const res = await fetch(url);
+  const res = await fetch(url + (url.includes("?") ? "&" : "?") + "v=" + BUNDLE_V);
   if (!res.ok) throw new Error(`fetch failed ${res.status}: ${url}`);
   return res.json();
 }

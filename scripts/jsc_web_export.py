@@ -228,8 +228,19 @@ def activations_payload(net, x_batch) -> list[dict]:
 
 def model_graph(net, input_shape) -> dict:
     """Describe the real JSC forward path."""
-    def pcount(m):
-        return int(sum(p.numel() for p in m.parameters()))
+    def pcount(m, exclude=()):
+        """Parameter count, optionally excluding shared submodules.
+
+        nnU-Net's UNetDecoder keeps a reference to the encoder it decodes
+        (dynamic_network_architectures/building_blocks/unet_decoder.py:46,
+        `self.encoder = encoder`), and nn.Module.parameters() recurses, so a
+        bare count of the decoder silently includes the whole encoder. That
+        made seg_head report 31,113,098 instead of 17,106,986 and inflated the
+        site's block total to 69,374,891 against a real 55,368,779. Exclude by
+        parameter identity so the fix does not depend on the attribute name.
+        """
+        skip = {id(q) for e in exclude for q in e.parameters()}
+        return int(sum(q.numel() for q in m.parameters() if id(q) not in skip))
 
     inner = net.network
     enc, dec = inner.encoder, inner.decoder
@@ -255,7 +266,8 @@ def model_graph(net, input_shape) -> dict:
         {"id": "logits", "name": "Malignancy logit (single, sigmoid)", "type": "output",
          "out_shape": [1], "param_count": 0, "cam_tap": False},
         {"id": "seg_head", "name": "Decoder -> nodule segmentation", "type": "output",
-         "out_shape": [2, d, h, w], "param_count": pcount(dec), "cam_tap": False},
+         "out_shape": [2, d, h, w], "param_count": pcount(dec, exclude=(enc,)),
+         "cam_tap": False},
     ]
     return {"schema": SCHEMA, "input_shape": [c, d, h, w], "cam_tap": "conv_block",
             "nodes": nodes,

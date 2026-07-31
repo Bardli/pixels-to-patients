@@ -376,7 +376,6 @@ footer a.link:hover { color: var(--accent); }
   transition-delay: var(--d, 0s);
 }
 .block.in { transform: translateX(var(--x)); opacity: 1; }
-.block.clk { cursor: pointer; }
 .slab {
   position: absolute; left: 50%; top: 50%; width: var(--fs); height: var(--fs);
   transform: translate(-50%, -50%) translateZ(calc((var(--i) - var(--mid, 0)) * var(--sg, 5px)));
@@ -384,12 +383,15 @@ footer a.link:hover { color: var(--accent); }
   border: 1px solid rgba(190,200,216,0.34);
   border-radius: 2px; box-shadow: inset 0 0 14px rgba(0,0,0,0.32);
 }
-.block.clk:hover .slab { border-color: rgba(224,226,236,0.6); background: rgba(150,165,190,0.17); }
+/* CAM tap: a flat tint, deliberately NOT a glow. The outer glow read as an
+   interactive/hover state on the one block people most want to click, and the
+   diagram handles no clicks. The legend below already appends "· TAP", so the
+   colour only has to make the block findable, not look pressable. */
 .block.tap .slab {
-  background: rgba(176,58,46,0.16); border-color: rgba(214,90,70,0.55);
-  box-shadow: inset 0 0 14px rgba(0,0,0,0.32), 0 0 12px -3px rgba(176,58,46,0.55);
+  background: rgba(176,58,46,0.13);
+  border-color: rgba(214,90,70,0.40);
+  box-shadow: inset 0 0 14px rgba(0,0,0,0.32);
 }
-.block.sel .slab { border-color: rgba(232,124,104,0.9); background: rgba(176,58,46,0.24); }
 /* flat legend under the 3D diagram — crisp, horizontal, in layer order */
 .arch-labels { display: flex; gap: 0.4rem; margin-top: 1.2rem; }
 .arch-lab {

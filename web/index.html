@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>From Pixels to Patients: Attribution Methods on Lung CT</title>
   <meta name="description" content="An implementation-first tour of seven attribution methods for medical-imaging CNNs, measured on real lung CT. MICCAI Educational Challenge 2026." />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <style>
     /* histogram + layer tabs (all 3D scene styling lives in styles.css) */
     .hist { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0.8rem; background: var(--card); border: 1px solid var(--line-dk); border-radius: var(--radius); }
@@ -16,7 +16,7 @@
 </head>
 <body>
   <nav class="chain-top">
-    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><b>PIXELS</b><span>/ PATIENTS</span></a>
     <div class="chain-rail" data-chain-rail></div>
   </nav>
 
@@ -79,7 +79,7 @@
       <div class="sec-head reveal"><span class="num">▸</span><h2>The architecture</h2><span class="rule"></span></div>
       <p class="intuition reveal" style="max-width:62ch; margin-bottom:1.6rem">Each block is a layer, drawn to scale: the <b>face</b> is the spatial resolution, the <b>depth</b> is the channel count. Resolution shrinks as channels grow. <b>Drag to orbit.</b></p>
       <div class="reveal" id="arch-mount"></div>
-      <p class="figcap" style="margin-top:0.9rem">Real <span class="mono">PlainConvUNet</span> + FPN classification head from the published JSC fold&#8209;3 checkpoint · shapes are channels×D×H×W · click a stage to inspect its activations below</p>
+      <p class="figcap" style="margin-top:0.9rem">Real <span class="mono">PlainConvUNet</span> + FPN classification head from the published JSC fold&#8209;3 checkpoint · shapes are channels×D×H×W · the CAM tap is the block tinted red</p>
     </div>
   </section>
 
@@ -148,12 +148,12 @@
   </footer>
 
   <script type="module">
-    import { loadJSON } from "./js/data.js?v=2";
-    import { mountFlow, mountDeck, initPipeline, mountArchitecture } from "./js/scene3d.js?v=8";
+    import { loadJSON } from "./js/data.js?v=3";
+    import { mountFlow, mountDeck, initPipeline, mountArchitecture } from "./js/scene3d.js?v=9";
     const ROOT = "public/data";
     const shortLabel = (id) => id.replace(/^\d+_/, "").replace(/_(pos|neg)\d*$/, "");
     const signOf = (id) => (/neg\d*$/.test(id) ? "−" : "+");
-    let curActs = null, curLayer = "stage2", arch = null;
+    let curActs = null, curLayer = "stage2";
 
     function renderLayerTabs() {
       const lt = document.getElementById("layer-tabs");
@@ -169,7 +169,6 @@
 
     function syncLayer() {
       renderLayerTabs();
-      if (arch) arch.select(curLayer);
       if (curActs) renderActs();
     }
 
@@ -213,10 +212,7 @@
 
       mountFlow(document.getElementById("flow-mount"), { acts: acts0, ctPayload, heatPayload });
 
-      arch = mountArchitecture(document.getElementById("arch-mount"), graph, {
-        onSelect: (id) => { curLayer = id; syncLayer(); },
-      });
-      arch.select(curLayer);
+      mountArchitecture(document.getElementById("arch-mount"), graph);
       renderLayerTabs();
       const tabs = document.getElementById("tabs");
       manifest.examples.forEach((id, i) => {

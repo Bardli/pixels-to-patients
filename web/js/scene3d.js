@@ -226,14 +226,19 @@ export function initPipeline({ stage, deck, rail, cap, tapFlag, prevBtn, nextBtn
    stack of thin slabs (a "loaf"): face size encodes spatial resolution,
    slab count encodes channel depth, so you watch resolution shrink as
    channels grow. Blocks slide/assemble in when the section scrolls into
-   view (one-shot, staggered); drag to orbit. Conv stages are clickable
-   to drive the activation inspector below. No scroll-scrub track.
+   view (one-shot, staggered); drag to orbit.
+
+   Display-only by design. It used to gate a click handler on
+   CONV = {stage1,stage2,stage3}, but those are activations.json's layer keys,
+   not model_graph.json's node ids (input/encoder/fpn/conv_block/...), so the
+   set never matched, no block was ever clickable, and the CAM-tap block sat
+   there glowing and inviting a click that went nowhere. The activation
+   inspector is driven by the layer tabs below instead.
    ------------------------------------------------------------------ */
-export function mountArchitecture(mount, graph, { onSelect } = {}) {
+export function mountArchitecture(mount, graph) {
   mount.innerHTML = "";
   const nodes = graph.nodes;
   const N = nodes.length;
-  const CONV = new Set(["stage1", "stage2", "stage3"]);
   const maxC = Math.max(...nodes.map((n) => n.out_shape[0] || 1), 1);
 
   const stage = document.createElement("div");
@@ -248,7 +253,6 @@ export function mountArchitecture(mount, graph, { onSelect } = {}) {
   const sw = stage.clientWidth || 900;
   const SLOT = Math.min(160, Math.max(46, (sw - 150) / Math.max(1, N - 1)));
 
-  const clickable = typeof onSelect === "function";   // homepage passes none → display-only
   const blocks = [];
   nodes.forEach((n, i) => {
     const shape = n.out_shape;
@@ -256,10 +260,9 @@ export function mountArchitecture(mount, graph, { onSelect } = {}) {
     const spatial = shape.length >= 3 ? shape[shape.length - 1] : 1;
     const fs = Math.round(11 + Math.min(spatial, 32) * 3.3);                 // face px ← spatial
     const nSlabs = Math.max(1, Math.min(16, Math.round((C / maxC) * 16)));   // depth ← channels
-    const isConv = CONV.has(n.id);
 
     const block = document.createElement("div");
-    block.className = "block" + (isConv && clickable ? " clk" : "") + (n.cam_tap ? " tap" : "");
+    block.className = "block" + (n.cam_tap ? " tap" : "");
     block.style.setProperty("--x", ((i - (N - 1) / 2) * SLOT) + "px");
     block.style.setProperty("--fs", fs + "px");
     block.style.setProperty("--mid", (nSlabs - 1) / 2);
@@ -271,17 +274,15 @@ export function mountArchitecture(mount, graph, { onSelect } = {}) {
       s.style.setProperty("--i", k);
       block.appendChild(s);
     }
-    if (isConv && clickable) block.addEventListener("click", () => onSelect(n.id));
     deck.appendChild(block);
-    blocks.push({ el: block, id: n.id, isConv });
+    blocks.push({ el: block, id: n.id });
   });
 
   const labs = document.createElement("div");
   labs.className = "arch-labels";
   labs.innerHTML = nodes.map((n) => {
-    const layer = CONV.has(n.id) ? n.id : "";
     const pr = n.param_count ? n.param_count.toLocaleString("en-US") + " params" : "—";
-    return `<div class="arch-lab${n.cam_tap ? " tap" : ""}" data-layer="${layer}">` +
+    return `<div class="arch-lab${n.cam_tap ? " tap" : ""}">` +
       `<b>${n.name}</b><span class="sh">${n.out_shape.join("×")}</span><span class="pr">${pr}</span></div>`;
   }).join("");
   mount.appendChild(labs);
@@ -309,12 +310,6 @@ export function mountArchitecture(mount, graph, { onSelect } = {}) {
     window.addEventListener("scroll", onScroll, { passive: true });   // never stay invisible
   }
 
-  return {
-    select(layerId) {
-      blocks.forEach((b) => b.el.classList.toggle("sel", b.isConv && b.id === layerId));
-      labs.querySelectorAll(".arch-lab").forEach((l) => l.classList.toggle("sel", l.dataset.layer === layerId));
-    },
-  };
 }
 
 /* ------------------------------------------------------------------

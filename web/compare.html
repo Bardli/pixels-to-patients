@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Compare all seven · From Pixels to Patients</title>
   <meta name="description" content="All seven attribution methods run on one LUNA25 screening-CT case, scored against the ground-truth nodule mask and ranked by measured enrichment — because a saliency map cannot be judged by eye." />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <style>
     /* Page-specific layout only — every color/component reused from styles.css
        (.scan, .cmp, .viewer, .scorecard, .metric, .badge). Not worth promoting
@@ -25,7 +25,7 @@
 </head>
 <body>
   <nav class="chain-top">
-    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><b>GRAD-CAM</b><span>/ CT</span></a>
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span><b>PIXELS</b><span>/ PATIENTS</span></a>
     <div class="chain-rail" data-chain-rail></div>
   </nav>
 
@@ -72,7 +72,7 @@
   </footer>
 
   <script type="module">
-    import { loadJSON, METHOD_LABELS, METRIC_LABELS, fmtMetric } from "./js/data.js?v=2";
+    import { loadJSON, METHOD_LABELS, METRIC_LABELS, fmtMetric } from "./js/data.js?v=3";
 
     const ROOT = "public/data";
     const shortLabel = (id) => id.replace(/^\d+_/, "").replace(/_(pos|neg)\d*$/, "");
