@@ -48,7 +48,7 @@
     },
     "layercam": {
       "mass_in_gt": 0.022571965248656903,
-      "inside_outside_ratio": 4.3486347402821295,
+      "inside_outside_ratio": 4.348634740282127,
       "pointing_acc": 0.0,
       "enrichment": 4.273049473294035
     },
@@ -65,10 +65,10 @@
       "enrichment": 1.92023322073769
     },
     "integrated_gradcam": {
-      "mass_in_gt": 0.02271038306299403,
-      "inside_outside_ratio": 4.375921518476216,
+      "mass_in_gt": 0.022710383062994024,
+      "inside_outside_ratio": 4.375921518476217,
       "pointing_acc": 0.0,
-      "enrichment": 4.299253047601016
+      "enrichment": 4.299253047601015
     }
   }
 }

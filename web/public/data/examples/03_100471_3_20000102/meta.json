@@ -29,8 +29,8 @@
   "outcome": "FP",
   "metrics": {
     "notgradcam": {
-      "mass_in_gt": 0.02863770505423579,
-      "inside_outside_ratio": 3.364690116609888,
+      "mass_in_gt": 0.028637705054235785,
+      "inside_outside_ratio": 3.364690116609887,
       "pointing_acc": 0.0,
       "enrichment": 3.296970818505747
     },
@@ -47,10 +47,10 @@
       "enrichment": 1.00420296281151
     },
     "layercam": {
-      "mass_in_gt": 0.0307619286561104,
-      "inside_outside_ratio": 3.6221897563360486,
+      "mass_in_gt": 0.030761928656110406,
+      "inside_outside_ratio": 3.622189756336049,
       "pointing_acc": 0.0,
-      "enrichment": 3.541526142128856
+      "enrichment": 3.5415261421288564
     },
     "occlusion": {
       "mass_in_gt": 0.010335073211460044,
@@ -65,10 +65,10 @@
       "enrichment": 2.8283618095628276
     },
     "integrated_gradcam": {
-      "mass_in_gt": 0.032711522424897506,
-      "inside_outside_ratio": 3.85951599218898,
+      "mass_in_gt": 0.03271152242489754,
+      "inside_outside_ratio": 3.8595159921889803,
       "pointing_acc": 1.0,
-      "enrichment": 3.765976870686136
+      "enrichment": 3.76597687068614
     }
   }
 }

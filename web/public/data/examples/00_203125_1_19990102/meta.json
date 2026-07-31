@@ -30,7 +30,7 @@
   "metrics": {
     "notgradcam": {
       "mass_in_gt": 0.07306372076489002,
-      "inside_outside_ratio": 3.564468436047278,
+      "inside_outside_ratio": 3.5644684360472776,
       "pointing_acc": 1.0,
       "enrichment": 3.3770988303255454
     },
@@ -47,10 +47,10 @@
       "enrichment": 1.0116801676113825
     },
     "layercam": {
-      "mass_in_gt": 0.07427365820641929,
-      "inside_outside_ratio": 3.628232102712744,
+      "mass_in_gt": 0.0742736582064193,
+      "inside_outside_ratio": 3.6282321027127438,
       "pointing_acc": 1.0,
-      "enrichment": 3.433023689828719
+      "enrichment": 3.4330236898287194
     },
     "occlusion": {
       "mass_in_gt": 0.024128533937941673,
@@ -59,16 +59,16 @@
       "enrichment": 1.1152517677206704
     },
     "integrated_gradients": {
-      "mass_in_gt": 0.03967526663738444,
-      "inside_outside_ratio": 1.868291373392881,
+      "mass_in_gt": 0.03967526663738443,
+      "inside_outside_ratio": 1.8682913733928805,
       "pointing_acc": 0.0,
-      "enrichment": 1.8338416816345775
+      "enrichment": 1.833841681634577
     },
     "integrated_gradcam": {
-      "mass_in_gt": 0.07555238686237516,
-      "inside_outside_ratio": 3.6958024792601734,
+      "mass_in_gt": 0.07555238686237511,
+      "inside_outside_ratio": 3.6958024792601725,
       "pointing_acc": 1.0,
-      "enrichment": 3.492128167442559
+      "enrichment": 3.492128167442557
     }
   }
 }

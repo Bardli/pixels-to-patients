@@ -559,7 +559,15 @@ def main() -> int:
         "per_example": per_example, "aggregate": aggregate,
     }))
 
-    ckpt = Path(args.checkpoint) if args.checkpoint else REPO / "artifacts/jsc/fold_3/checkpoint_best.pth"
+    # Resolve before relativising: a relative --checkpoint (the form the docs and
+    # the plan both use) raised ValueError against the absolute REPO, which threw
+    # away the manifest AFTER all five cases had been computed.
+    ckpt = Path(args.checkpoint).resolve() if args.checkpoint \
+        else (REPO / "artifacts/jsc/fold_3/checkpoint_best.pth").resolve()
+    try:
+        ckpt_path = str(ckpt.relative_to(REPO))
+    except ValueError:
+        ckpt_path = str(ckpt)          # a checkpoint kept outside the repo
     lock = REPO / "uv.lock"
     (out_root / "manifest.json").write_text(json.dumps({
         "schema": SCHEMA,
@@ -573,7 +581,7 @@ def main() -> int:
             "fold": 3,
             "published_val_auc": 0.8875,
         },
-        "checkpoint": {"path": str(ckpt.relative_to(REPO)), "sha256": sha256(ckpt)},
+        "checkpoint": {"path": ckpt_path, "sha256": sha256(ckpt)},
         "uv_lock_sha256": sha256(lock) if lock.exists() else None,
         "git": git_info(),
         "methods": site_keys,

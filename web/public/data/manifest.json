@@ -1,6 +1,6 @@
 {
   "schema": "gradcam-repro.web-bundle.v2",
-  "generated_at": "2026-07-29T19:28:17.186464+00:00",
+  "generated_at": "2026-07-31T22:05:15.880567+00:00",
   "generated_by": "uv run python scripts/jsc_web_export.py",
   "model": {
     "name": "JSC (bowang-lab) nnUNetCLSTrainerMTL, PlainConvUNet 3d_fullres",
@@ -11,12 +11,12 @@
     "published_val_auc": 0.8875
   },
   "checkpoint": {
-    "path": "artifacts/jsc/model/nnUNetCLSTrainerMTL__nnUNetPlans__3d_fullres/fold_3/checkpoint_best.pth",
+    "path": "artifacts/jsc/fold_3/checkpoint_best.pth",
     "sha256": "33ad8109aafd5f0b6d6c82a7f6911fa4167c36e44c9c4e50bed3c19aef25968f"
   },
-  "uv_lock_sha256": "578ae14dddab39e92d701cb9207f06fcd1cae9c07163854a827c862a6f6095eb",
+  "uv_lock_sha256": "eb4779a0781f8e22ba081f71734c5d71ab35da0aa9c761bee0c53cd5951708de",
   "git": {
-    "commit": "26917bf3e842af1b3b054b91a1ab048eb23cbfd4",
+    "commit": "2960bbdaab740f34c531c44545403e522b6d683b",
     "dirty": true
   },
   "methods": [

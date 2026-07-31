@@ -29,10 +29,10 @@
   "outcome": "TN",
   "metrics": {
     "notgradcam": {
-      "mass_in_gt": 0.00015663772289325665,
-      "inside_outside_ratio": 2.832124168042559,
+      "mass_in_gt": 0.0001566377228932567,
+      "inside_outside_ratio": 2.8321241680425597,
       "pointing_acc": 0.0,
-      "enrichment": 2.8318371882848186
+      "enrichment": 2.8318371882848195
     },
     "gradcam": {
       "mass_in_gt": 0.00017893220331604992,
