@@ -707,6 +707,86 @@ def _compute_layercam(model, x_batch, stages, stage_names, target_shape,
     return raw
 
 
+def _compute_gradcam_decomposed(model, x_batch, stages, stage_names, target_shape,
+                                target_cls, extract_logits_fn, pid):
+    """Grad-CAM by hand, keeping every intermediate term.
+
+    MONAI's GradCAM returns the finished map only, so the site could show the
+    result but never the arithmetic. This reproduces it with the same
+    forward/backward hooks _compute_layercam uses; the only difference from
+    LayerCAM is the reduction -- Grad-CAM pools the gradient over the volume
+    into one weight per channel, LayerCAM keeps it per voxel.
+
+    tests/test_gradcam_parity.py asserts this equals MONAI's output. The
+    exported heat-map still comes from _compute_truegradcam; this function
+    supplies terms only, so a divergence would show up as a stepper whose last
+    panel disagrees with the figure above it.
+    """
+    activations, gradients, handles = {}, {}, []
+    for sname, stage_mod in zip(stage_names, stages):
+        def fwd_hook(mod, inp, out, _s=sname):
+            activations[_s] = out.detach()
+
+        def bwd_hook(mod, grad_in, grad_out, _s=sname):
+            gradients[_s] = grad_out[0].detach()
+
+        handles.append(stage_mod.register_forward_hook(fwd_hook))
+        handles.append(stage_mod.register_full_backward_hook(bwd_hook))
+
+    x_gc = x_batch.clone().requires_grad_(True)
+    logits_gc = _as_two_column(extract_logits_fn(model(x_gc)))
+    logits_gc[0, target_cls].backward()
+    for h in handles:
+        h.remove()
+    model.zero_grad()
+
+    raw, terms = {}, {}
+    for sname in stage_names:
+        act, grad = activations[sname], gradients[sname]
+        alpha = grad.mean(dim=(2, 3, 4), keepdim=True)           # [1,K,1,1,1]
+        weighted = alpha * act
+        summed = weighted.sum(dim=1)[0]                          # [D,H,W]
+        relu = F.relu(summed)
+
+        # Show the channel Grad-CAM leans on hardest, picked from the data.
+        k = int(alpha[0, :, 0, 0, 0].abs().argmax().item())
+
+        # Measured, not assumed: when the classifier head pools globally, the
+        # gradient reaching this tap is CONSTANT over the volume, because
+        # d y / d A[k,z,y,x] = (1/N) * d y / d pooled_k for every voxel. On JSC
+        # (conv_block -> AdaptiveAvgPool3d -> Linear) the per-channel spatial
+        # std is exactly 0.0 for all 640 channels.
+        #
+        # Two consequences the caller must not paper over:
+        #   * the `gradient` term is one uniform value, not a texture;
+        #   * `weighted` is `activation` times a scalar, so after per-panel
+        #     min-max it renders identically to `activation`.
+        # So alpha_all is exported too: the spread of alpha across channels is
+        # where the class-specific signal actually lives, and the fact that most
+        # alphas are negative is what lets the final ReLU erase parts of the map.
+        gflat = grad[0].reshape(grad.shape[1], -1)
+        grad_constant = bool(float(gflat.std(dim=1).max().item()) == 0.0)
+        alpha_vec = alpha[0, :, 0, 0, 0]
+
+        terms[sname] = {
+            "activation": act[0, k].cpu().numpy().astype(np.float32),
+            "gradient": grad[0, k].cpu().numpy().astype(np.float32),
+            "weighted": weighted[0, k].cpu().numpy().astype(np.float32),
+            "summed": summed.cpu().numpy().astype(np.float32),
+            "relu": relu.cpu().numpy().astype(np.float32),
+            "channel": k,
+            "alpha": float(alpha[0, k, 0, 0, 0].item()),
+            "alpha_all": alpha_vec.cpu().numpy().astype(np.float32),
+            "alpha_negative": int((alpha_vec < 0).sum().item()),
+            "grad_is_constant": grad_constant,
+        }
+
+        att = _upsample_to(relu.cpu().numpy().astype(np.float32), target_shape)
+        _validate_att_volume(att, target_shape, sname, "gradcam_decomposed", pid)
+        raw[sname] = att
+    return {"raw": raw, "terms": terms}
+
+
 def _compute_occlusion(model, x_batch, target_shape, target_cls,
                        extract_logits_fn, config, pid):
     """Occlusion Sensitivity via MONAI."""
