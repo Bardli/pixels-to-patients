@@ -102,3 +102,49 @@ def test_layercam_reports_whether_the_gradient_was_constant():
     assert t["grad_is_constant"] is True
     assert t["alpha_all"].shape == (4,)
     assert t["hadamard"].shape == TAP
+
+
+class Cfg:
+    """Minimal stand-in for GradcamConfig, with the real attribute names."""
+    ig_n_steps = 8
+    ig_batch_size = 2
+    ig_smooth_sigma = 0.0
+    igc_n_steps = 8
+
+
+@pytest.mark.parametrize("fn_name,extra", [
+    ("_compute_integrated_gradients", ()),
+    ("_compute_integrated_gradcam", ("stages",)),
+])
+def test_path_checkpoints_are_monotone_in_frac(fn_name, extra):
+    """The saturation story only reads if the partial sums are in path order."""
+    net, x = _net_and_x()
+    fn = getattr(gv, fn_name)
+    if extra:
+        out = fn(net, x, [net.stage], ["stage0"], TAP, 1, lambda o: o, Cfg(),
+                 "test", return_terms=True)
+        terms = out["terms"]["stage0"]
+    else:
+        out = fn(net, x, TAP, 1, lambda o: o, Cfg(), "test", return_terms=True)
+        terms = out["terms"]["input_resolution"]
+
+    path = terms["path"]
+    assert len(path) == 4, f"expected 4 checkpoints, got {len(path)}"
+    fracs = [p["frac"] for p in path]
+    assert fracs == sorted(fracs), f"path out of order: {fracs}"
+    assert fracs[-1] == pytest.approx(1.0)
+    for p in path:
+        assert np.isfinite(p["map"]).all()
+        assert p["map"].ndim == 3
+
+
+def test_path_last_checkpoint_tracks_the_final_map():
+    """The last panel a reader sees must be the finished integral, not a stage
+    partway along it."""
+    net, x = _net_and_x()
+    out = gv._compute_integrated_gradcam(
+        net, x, [net.stage], ["stage0"], TAP, 1, lambda o: o, Cfg(), "test",
+        return_terms=True)
+    last = out["terms"]["stage0"]["path"][-1]["map"]
+    # raw is upsampled to target_shape; here tap == target so they must agree.
+    np.testing.assert_allclose(last, out["raw"]["stage0"], rtol=1e-5, atol=1e-7)

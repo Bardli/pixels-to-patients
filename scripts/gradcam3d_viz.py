@@ -845,8 +845,35 @@ def _compute_occlusion(model, x_batch, target_shape, target_cls,
     return occ_arr
 
 
+def _path_marks(n_steps):
+    """Ascending checkpoints along an integration path, last one the end.
+
+    Fractions rather than step indices, so a panel's label stays correct if the
+    step count changes. May return fewer than 4 for a very short path (the
+    marks collide), which is why callers subsample rather than assume 4.
+    """
+    return sorted({max(1, n_steps // 8), max(1, n_steps // 4),
+                   max(1, n_steps // 2), n_steps})
+
+
+def _subsample_path(snaps, want=4):
+    """Pick `want` snapshots evenly from `snaps`, always keeping the last.
+
+    The last one is the finished integral, so it is the panel that has to agree
+    with the map the page scores; dropping it would leave the stepper ending
+    somewhere other than the figure beside it.
+    """
+    snaps = sorted(snaps, key=lambda s: s["frac"])
+    if len(snaps) <= want:
+        return snaps
+    last = len(snaps) - 1
+    idx = sorted({round(i * last / (want - 1)) for i in range(want)})
+    return [snaps[i] for i in idx]
+
+
 def _compute_integrated_gradients(model, x_batch, target_shape, target_cls,
-                                  extract_logits_fn, config, pid):
+                                  extract_logits_fn, config, pid,
+                                  return_terms=False):
     """Integrated Gradients with optional Gaussian smoothing."""
     device = x_batch.device
     baseline = torch.zeros_like(x_batch)
@@ -854,6 +881,13 @@ def _compute_integrated_gradients(model, x_batch, target_shape, target_cls,
     batch_size = config.ig_batch_size
     alphas = torch.linspace(0, 1, n_steps + 1, device=device)
     accumulated_grads = torch.zeros_like(x_batch, device="cpu")
+
+    # Snapshot the partial integral so the page can SHOW saturation instead of
+    # asserting it. The loop is batched, so a partial integral only exists at a
+    # batch boundary -- marking on step indices would silently collapse two
+    # marks that fall inside one batch and yield fewer panels than asked for.
+    # Collect every boundary, then subsample four evenly with the end included.
+    snaps, done = [], 0
 
     for i in range(0, n_steps + 1, batch_size):
         batch_alphas = alphas[i:i + batch_size]
@@ -864,6 +898,11 @@ def _compute_integrated_gradients(model, x_batch, target_shape, target_cls,
         logits_ig[:, target_cls].sum().backward()
         accumulated_grads += x_interp.grad.sum(dim=0, keepdim=True).cpu()
         model.zero_grad()
+        done += int(batch_alphas.numel())
+        if return_terms:
+            partial = (accumulated_grads / done) * (x_batch.cpu() - baseline.cpu())
+            snaps.append({"frac": done / (n_steps + 1),
+                          "map": np.abs(partial[0].mean(dim=0).numpy()).astype(np.float32)})
 
     ig_attr = (accumulated_grads / (n_steps + 1)) * (x_batch.cpu() - baseline.cpu())
     ig_arr = ig_attr[0].mean(dim=0).numpy()
@@ -875,12 +914,19 @@ def _compute_integrated_gradients(model, x_batch, target_shape, target_cls,
 
     _validate_att_volume(ig_arr, target_shape, "input_resolution",
                          "integrated_gradients", pid)
+    if return_terms:
+        return {"raw": ig_arr,
+                "terms": {"input_resolution": {
+                    "path": _subsample_path(snaps, 4),
+                    "steps": n_steps,
+                    "channel": None,
+                }}}
     return ig_arr
 
 
 def _compute_integrated_gradcam(model, x_batch, stages, stage_names,
                                 target_shape, target_cls, extract_logits_fn,
-                                config, pid):
+                                config, pid, return_terms=False):
     """Integrated Grad-CAM (Sattarzadeh et al., ICASSP 2021).
     Path integral of Grad-CAM maps from black baseline to input."""
     device = x_batch.device
@@ -903,6 +949,8 @@ def _compute_integrated_gradcam(model, x_batch, stages, stage_names,
         h.remove()
 
     integrated_raw = {sname: None for sname in stage_names}
+    # Same saturation story as plain IG, but this integral lives at the tap.
+    paths = {sname: [] for sname in stage_names}
 
     for t in range(1, n_steps + 1):
         alpha = t / n_steps
@@ -942,6 +990,12 @@ def _compute_integrated_gradcam(model, x_batch, stages, stage_names,
 
         model.zero_grad()
 
+        if return_terms:
+            for sname in stage_names:
+                if integrated_raw[sname] is not None:
+                    paths[sname].append({"frac": t / n_steps,
+                                         "map": integrated_raw[sname].copy()})
+
     for sname in stage_names:
         arr = integrated_raw[sname]
         if arr is not None:
@@ -949,6 +1003,11 @@ def _compute_integrated_gradcam(model, x_batch, stages, stage_names,
             _validate_att_volume(arr, target_shape, sname, "integrated_gradcam", pid)
             integrated_raw[sname] = arr
 
+    if return_terms:
+        return {"raw": integrated_raw,
+                "terms": {s: {"path": _subsample_path(paths[s], 4),
+                              "steps": n_steps, "channel": None}
+                          for s in stage_names}}
     return integrated_raw
 
 
