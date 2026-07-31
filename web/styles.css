@@ -473,6 +473,16 @@ footer a.link:hover { color: var(--accent); }
   border-bottom: 1px solid var(--line);
 }
 .chain-top .brand { flex: none; }
+/* Source link, pinned right. flex:none so the horizontally scrolling rail
+   never squeezes it off on a narrow viewport. */
+.chain-top .gh {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--radius);
+  color: var(--ink-faint); border: 1px solid transparent;
+  transition: color .18s, border-color .18s, background .18s;
+}
+.chain-top .gh:hover { color: var(--ink); border-color: var(--line); background: var(--bg-tint); }
+.chain-top .gh svg { display: block; }
 
 .chain-rail {
   display: flex; align-items: center; gap: 0.1rem;
