@@ -95,33 +95,79 @@
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It path-integrates gradients at the <span class="mono">conv_block</span> tap from a per-volume mean baseline.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>integrated_gradcam()</span></div>
-<pre>def integrated_gradcam(
-    model: JSCAdapter,
-    x: torch.Tensor,
-    target: int | torch.Tensor | None = None,
-    layer: str = TARGET_LAYER,
-    steps: int = 20,
-) -&gt; torch.Tensor:
-    model.eval()
-    baseline = torch.ones_like(x) * x.detach().mean(dim=(1, 2, 3, 4), keepdim=True)
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_integrated_gradcam()</span></div>
+<pre>def _compute_integrated_gradcam(model, x_batch, stages, stage_names,
+                                target_shape, target_cls, extract_logits_fn,
+                                config, pid):
+    """Integrated Grad-CAM (Sattarzadeh et al., ICASSP 2021).
+    Path integral of Grad-CAM maps from black baseline to input."""
+    device = x_batch.device
+    n_steps = config.igc_n_steps
+    baseline = torch.zeros_like(x_batch)
+
+    # Pre-compute baseline activations (single forward pass)
+    baseline_acts = {}
+    baseline_hooks = []
+    for sname, stage_mod in zip(stage_names, stages):
+        acts = []
+        def _hook(mod, inp, out, _a=acts):
+            _a.append(out.detach())
+        h = stage_mod.register_forward_hook(_hook)
+        baseline_hooks.append((h, sname, acts))
     with torch.no_grad():
-        _, input_features = model(x, return_features=True)
-        _, baseline_features = model(baseline, return_features=True)
-        feature_delta = input_features[layer] - baseline_features[layer]
-    total_grad = torch.zeros_like(feature_delta)
-    for alpha in torch.linspace(0, 1, steps + 1, device=x.device, dtype=x.dtype)[1:]:
-        model.zero_grad(set_to_none=True)
-        x_step = (baseline + alpha * (x - baseline)).detach()
-        logits, activation = _cam_forward(model, x_step, layer)
-        score_for_target(logits, target).backward()
-        gradients = activation.grad
-        if gradients is None:
-            raise RuntimeError("Integrated Grad-CAM hook did not receive activation gradients")
-        total_grad += gradients
-    contribution = (total_grad / steps) * feature_delta
-    cam = contribution.abs().sum(dim=1, keepdim=True)
-    return normalize_map(upsample_to_input(cam, x))</pre>
+        model(baseline)
+    for h, sname, acts in baseline_hooks:
+        baseline_acts[sname] = acts[0]
+        h.remove()
+
+    integrated_raw = {sname: None for sname in stage_names}
+
+    for t in range(1, n_steps + 1):
+        alpha = t / n_steps
+        x_interp = baseline + alpha * (x_batch - baseline)
+        x_interp = x_interp.detach().requires_grad_(True)
+
+        interp_acts = {}
+        hooks = []
+        for sname, stage_mod in zip(stage_names, stages):
+            acts_list = []
+            def _hook(mod, inp, out, _a=acts_list):
+                out.retain_grad()
+                _a.append(out)
+            h = stage_mod.register_forward_hook(_hook)
+            hooks.append((h, sname, acts_list))
+
+        logits_igc = _as_two_column(extract_logits_fn(model(x_interp)))
+        for h, sname, acts_list in hooks:
+            interp_acts[sname] = acts_list[0]
+            h.remove()
+
+        logits_igc[0, target_cls].backward()
+
+        for sname in stage_names:
+            act = interp_acts[sname]
+            delta_act = act - baseline_acts[sname].to(device)
+            grad = act.grad
+            if grad is None:
+                continue
+            cam_map = torch.sum(grad * delta_act, dim=1, keepdim=True)
+            cam_map = torch.clamp(cam_map, min=0)
+            cam_np = cam_map[0, 0].detach().cpu().numpy().astype(np.float32)
+            if integrated_raw[sname] is None:
+                integrated_raw[sname] = cam_np / n_steps
+            else:
+                integrated_raw[sname] += cam_np / n_steps
+
+        model.zero_grad()
+
+    for sname in stage_names:
+        arr = integrated_raw[sname]
+        if arr is not None:
+            arr = _upsample_to(arr, target_shape)
+            _validate_att_volume(arr, target_shape, sname, "integrated_gradcam", pid)
+            integrated_raw[sname] = arr
+
+    return integrated_raw</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">

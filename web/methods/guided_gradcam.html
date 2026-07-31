@@ -79,17 +79,25 @@
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It reuses <span class="mono">gradcam()</span> and <span class="mono">guided_backprop_raw()</span>, then takes their product.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>guided_gradcam()</span></div>
-<pre>def guided_gradcam(
-    model: JSCAdapter,
-    x: torch.Tensor,
-    target: int | torch.Tensor | None = None,
-    layer: str = TARGET_LAYER,
-) -&gt; torch.Tensor:
-    cam = gradcam(model, x, target, layer=layer, normalize=True)
-    guided = guided_backprop_raw(model, x, target)
-    product = guided * cam
-    return normalize_map(product.abs().sum(dim=1, keepdim=True))</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_guided_gradcam()</span></div>
+<pre>def _compute_guided_gradcam(model, x_batch, truegradcam_raw, stages, stage_names,
+                            target_shape, target_cls, extract_logits_fn, pid):
+    """Guided Grad-CAM: guided backprop saliency * Grad-CAM per stage."""
+    device = x_batch.device
+    with guided_backprop_context(model):
+        x_input = x_batch.clone().requires_grad_(True)
+        logits_gb = _as_two_column(extract_logits_fn(model(x_input)))
+        logits_gb[0, target_cls].backward()
+        guided_bp = x_input.grad[0].mean(dim=0).cpu().numpy()
+    model.zero_grad()
+
+    raw = {}
+    for sname in stage_names:
+        gc = truegradcam_raw[sname]
+        gc_relu = np.maximum(gc, 0)
+        raw[sname] = guided_bp * gc_relu
+        _validate_att_volume(raw[sname], target_shape, sname, "guided_gradcam", pid)
+    return raw</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">

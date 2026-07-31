@@ -81,22 +81,39 @@
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. Tapped at <span class="mono">conv_block</span> like Grad-CAM, but the weighting is element-wise rather than global-average-pooled.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>layercam()</span></div>
-<pre>def layercam(
-    model: JSCAdapter,
-    x: torch.Tensor,
-    target: int | torch.Tensor | None = None,
-    layer: str = TARGET_LAYER,
-) -&gt; torch.Tensor:
-    model.eval()
-    model.zero_grad(set_to_none=True)
-    logits, activation = _cam_forward(model, x, layer)
-    score_for_target(logits, target).backward()
-    gradients = activation.grad
-    if gradients is None:
-        raise RuntimeError("LayerCAM hook did not receive activation gradients")
-    cam = (gradients.clamp_min(0) * activation).sum(dim=1, keepdim=True).clamp_min(0)
-    return normalize_map(upsample_to_input(cam, x))</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_layercam()</span></div>
+<pre>def _compute_layercam(model, x_batch, stages, stage_names, target_shape,
+                      target_cls, extract_logits_fn, pid):
+    """Layer-CAM: ReLU(grad * activation) summed over channels, per stage."""
+    device = x_batch.device
+    activations = {}
+    gradients = {}
+    handles = []
+
+    for sname, stage_mod in zip(stage_names, stages):
+        def fwd_hook(mod, inp, out, _s=sname):
+            activations[_s] = out.detach()
+        def bwd_hook(mod, grad_in, grad_out, _s=sname):
+            gradients[_s] = grad_out[0].detach()
+        handles.append(stage_mod.register_forward_hook(fwd_hook))
+        handles.append(stage_mod.register_full_backward_hook(bwd_hook))
+
+    x_lc = x_batch.clone().requires_grad_(True)
+    logits_lc = _as_two_column(extract_logits_fn(model(x_lc)))
+    logits_lc[0, target_cls].backward()
+    for h in handles:
+        h.remove()
+    model.zero_grad()
+
+    raw = {}
+    for sname in stage_names:
+        act = activations[sname]
+        grad = gradients[sname]
+        lc = F.relu(grad * act).sum(dim=1)[0].cpu().numpy()
+        lc = _upsample_to(lc, target_shape)
+        _validate_att_volume(lc, target_shape, sname, "layercam", pid)
+        raw[sname] = lc
+    return raw</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">

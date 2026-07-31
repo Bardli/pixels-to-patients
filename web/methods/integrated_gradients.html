@@ -97,27 +97,38 @@
         <h3>The implementation</h3>
         <p>The real function from the codebase — nothing hidden. It integrates gradients in <em>input</em> space over a 50-step path from a zero baseline.</p>
         <div class="codeblock">
-          <div class="cap"><span>src/gradcam_repro/attribution.py</span><span>integrated_gradients()</span></div>
-<pre>def integrated_gradients(
-    model: JSCAdapter,
-    x: torch.Tensor,
-    target: int | torch.Tensor | None = None,
-    steps: int = 50,
-    smooth_sigma: float = 0.8,
-) -&gt; torch.Tensor:
-    model.eval()
-    baseline = torch.zeros_like(x)
-    total_grad = torch.zeros_like(x)
-    for alpha in torch.linspace(0, 1, steps + 1, device=x.device, dtype=x.dtype)[1:]:
-        model.zero_grad(set_to_none=True)
-        x_step = (baseline + alpha * (x - baseline)).detach().requires_grad_(True)
-        logits = model(x_step)
-        grad = torch.autograd.grad(score_for_target(logits, target), x_step)[0]
-        total_grad += grad
-    attribution = (x - baseline) * total_grad / steps
-    heatmap = attribution.abs().sum(dim=1, keepdim=True)
-    heatmap = gaussian_blur3d(heatmap, sigma=smooth_sigma)
-    return normalize_map(heatmap)</pre>
+          <div class="cap"><span>scripts/gradcam3d_viz.py</span><span>_compute_integrated_gradients()</span></div>
+<pre>def _compute_integrated_gradients(model, x_batch, target_shape, target_cls,
+                                  extract_logits_fn, config, pid):
+    """Integrated Gradients with optional Gaussian smoothing."""
+    device = x_batch.device
+    baseline = torch.zeros_like(x_batch)
+    n_steps = config.ig_n_steps
+    batch_size = config.ig_batch_size
+    alphas = torch.linspace(0, 1, n_steps + 1, device=device)
+    accumulated_grads = torch.zeros_like(x_batch, device="cpu")
+
+    for i in range(0, n_steps + 1, batch_size):
+        batch_alphas = alphas[i:i + batch_size]
+        diff = x_batch - baseline
+        x_interp = baseline + batch_alphas.view(-1, 1, 1, 1, 1) * diff
+        x_interp = x_interp.detach().requires_grad_(True)
+        logits_ig = _as_two_column(extract_logits_fn(model(x_interp)))
+        logits_ig[:, target_cls].sum().backward()
+        accumulated_grads += x_interp.grad.sum(dim=0, keepdim=True).cpu()
+        model.zero_grad()
+
+    ig_attr = (accumulated_grads / (n_steps + 1)) * (x_batch.cpu() - baseline.cpu())
+    ig_arr = ig_attr[0].mean(dim=0).numpy()
+    ig_arr = np.abs(ig_arr)
+
+    if config.ig_smooth_sigma &gt; 0:
+        from scipy.ndimage import gaussian_filter
+        ig_arr = gaussian_filter(ig_arr, sigma=config.ig_smooth_sigma)
+
+    _validate_att_volume(ig_arr, target_shape, "input_resolution",
+                         "integrated_gradients", pid)
+    return ig_arr</pre>
         </div>
         <h3>Gotchas that make it work</h3>
         <ol class="gotchas">

@@ -29,3 +29,6 @@ third_party/
 
 # Agent session state (same class as .claude/)
 .superpowers/
+
+# OpenReview submission working folder — not synced
+submission/
