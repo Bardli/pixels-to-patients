@@ -11,9 +11,9 @@
    one flat colour and `weighted` would be pixel-identical to `activation`. The
    class-specific signal lives in the spread of the per-channel weights instead,
    so that is what gets drawn. See web/DATA_CONTRACT.md. */
-import { loadJSON } from "./data.js?v=4";
+import { loadJSON, turbo } from "./data.js?v=4";
 import { divergeRGB, zeroAt, fmtNum } from "./diverge.js?v=1";
-import { STEPS } from "./steps.js?v=1";
+import { STEPS } from "./steps.js?v=2";
 
 const ROOT = "../public/data";
 
@@ -29,13 +29,20 @@ function paintImage(canvas, payload) {
     let rgb;
     if (signed) {
       // Re-map so the payload's zero lands on the scale's midpoint, whatever
-      // the asymmetry between vmin and vmax.
+      // the asymmetry between vmin and vmax. Turbo cannot show a sign, so
+      // signed terms are the one place this page departs from the site's heat
+      // colouring -- and departing is the point, since a large negative must
+      // not paint like a large positive.
       const s = t < z ? (z > 0 ? (t / z) * 0.5 : 0.5)
                       : (z < 1 ? 0.5 + ((t - z) / (1 - z)) * 0.5 : 0.5);
       rgb = divergeRGB(s);
     } else {
-      const v = Math.round(t * 255);
-      rgb = [v, v, v];
+      // Turbo with the same 0.6 gamma drawFeature uses. Two reasons, both
+      // load-bearing: the last step of a CAM stepper IS the map already shown
+      // in turbo at the top of the page, so a different palette would hide the
+      // link the stepper exists to draw; and 71% of tap activations are exactly
+      // zero, which a linear ramp renders as a mostly black square.
+      rgb = turbo(Math.pow(t, 0.6));
     }
     img.data.set([rgb[0], rgb[1], rgb[2], 255], i * 4);
   }

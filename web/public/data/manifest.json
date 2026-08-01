@@ -1,6 +1,6 @@
 {
   "schema": "gradcam-repro.web-bundle.v2",
-  "generated_at": "2026-07-31T22:05:15.880567+00:00",
+  "generated_at": "2026-08-01T02:29:35.698156+00:00",
   "generated_by": "uv run python scripts/jsc_web_export.py",
   "model": {
     "name": "JSC (bowang-lab) nnUNetCLSTrainerMTL, PlainConvUNet 3d_fullres",
@@ -16,7 +16,7 @@
   },
   "uv_lock_sha256": "eb4779a0781f8e22ba081f71734c5d71ab35da0aa9c761bee0c53cd5951708de",
   "git": {
-    "commit": "2960bbdaab740f34c531c44545403e522b6d683b",
+    "commit": "b897e8aa62f60000596f8f37df79bc6ed0643c99",
     "dirty": true
   },
   "methods": [
