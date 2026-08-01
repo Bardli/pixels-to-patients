@@ -19,7 +19,7 @@
     <div class="container">
       <p class="label kicker">Method 04 / 07 · gradient-based · element-wise</p>
       <h1>LayerCAM</h1>
-      <p class="intuition">Like Grad-CAM, but weight each activation by its own positive gradient <em>at that location</em> rather than one pooled weight per channel. The result is a finer, spatially varying map from the same tap point.</p>
+      <p class="intuition">Grad-CAM pools the gradient into one weight per channel, which is meant to cost spatial detail. LayerCAM keeps the gradient at every voxel instead, and on most networks that buys a finer map. Here it buys nothing: the classifier head pools globally, so the gradient arriving at this tap is already one constant per channel. What changes is only where the ReLU sits, and that turns out to matter more than the refinement would have. This page is a method not working as advertised, measured rather than assumed.</p>
     </div>
   </div>
 

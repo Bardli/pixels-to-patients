@@ -740,9 +740,24 @@ def _compute_layercam(model, x_batch, stages, stage_names, target_shape,
             gflat = grad[0].reshape(grad.shape[1], -1)
             alpha_vec = grad.mean(dim=(2, 3, 4))[0]
             k = int(alpha_vec.abs().argmax().item())
+
+            # What LayerCAM throws away, and why it is worth a panel.
+            #
+            # The tap ends in a ReLU so every A^k >= 0, and under a globally
+            # pooled head the gradient is one constant a_k per channel. Then
+            #     LayerCAM = sum_k ReLU(a_k A^k) = sum_{a_k > 0} a_k A^k
+            # exactly -- verified 0.0 max difference on the real network. So on
+            # this architecture LayerCAM does not refine Grad-CAM at all: it
+            # discards every negative-alpha channel outright, where Grad-CAM
+            # lets them cancel against the positives before clipping. With 415
+            # of 640 alphas negative that is most of the tap, and the discarded
+            # sum below is spatially structured rather than noise, so the page
+            # can show what was dropped instead of asserting it.
+            discarded = (alpha_vec.clamp(max=0)[:, None, None, None] * act[0]).sum(0)
             terms[sname] = {
                 "activation": act[0, k].cpu().numpy().astype(np.float32),
                 "hadamard": prod[0, k].cpu().numpy().astype(np.float32),
+                "discarded": discarded.cpu().numpy().astype(np.float32),
                 "relu": lc_tap.cpu().numpy().astype(np.float32),
                 "channel": k,
                 "alpha": float(alpha_vec[k].item()),

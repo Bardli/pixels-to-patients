@@ -148,3 +148,38 @@ def test_path_last_checkpoint_tracks_the_final_map():
     last = out["terms"]["stage0"]["path"][-1]["map"]
     # raw is upsampled to target_shape; here tap == target so they must agree.
     np.testing.assert_allclose(last, out["raw"]["stage0"], rtol=1e-5, atol=1e-7)
+
+
+def test_layercam_equals_the_positive_alpha_sum_under_a_pooled_head():
+    """The LayerCAM page now states an identity, so pin it.
+
+    The tap ends in a ReLU (A >= 0) and a globally pooled head makes the
+    gradient one constant a_k per channel, so
+        sum_k ReLU(a_k A^k) == sum_{a_k > 0} a_k A^k
+    exactly. That is why LayerCAM drops negative-weight channels outright here
+    instead of refining anything, and the `discarded` term is the part Grad-CAM
+    would have cancelled against the positives instead.
+    """
+    net, x = _net_and_x()
+    out = gv._compute_layercam(
+        net, x, [net.stage], ["stage0"], TAP, 1, lambda o: o, "test",
+        return_terms=True)
+    t = out["terms"]["stage0"]
+    assert t["grad_is_constant"] is True, "identity only holds for a pooled head"
+
+    import torch as _t
+    acts = {}
+    h = net.stage.register_forward_hook(lambda m, i, o: acts.__setitem__("a", o.detach()))
+    with _t.no_grad():
+        net(x)
+    h.remove()
+    A = acts["a"][0]
+    assert float(A.min()) >= 0.0, "tap must be post-ReLU for the identity to hold"
+
+    alpha = _t.as_tensor(t["alpha_all"])
+    pos = (alpha.clamp(min=0)[:, None, None, None] * A).sum(0).numpy()
+    np.testing.assert_allclose(t["relu"], pos, rtol=1e-5, atol=1e-7)
+
+    neg = (alpha.clamp(max=0)[:, None, None, None] * A).sum(0).numpy()
+    np.testing.assert_allclose(t["discarded"], neg, rtol=1e-5, atol=1e-7)
+    assert t["discarded"].min() <= 0.0, "discarded evidence is non-positive"

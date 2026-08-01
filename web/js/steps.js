@@ -35,10 +35,12 @@ export const STEPS = {
   layercam: [
     { term: "activation", label: "Aᵏ", sym: "A",
       caption: "Same tap, same channel convention as Grad-CAM, so the two pages are comparable." },
-    { term: "hadamard", label: "∂yᶜ/∂Aᵏ ⊙ Aᵏ", sym: "hadamard",
-      caption: "LayerCAM weights per voxel instead of pooling first. On this network the gradient is spatially constant, so that freedom has nothing to add: the difference from Grad-CAM is only where the ReLU sits." },
+    { term: "vector:alpha_all", label: "∂yᶜ/∂Aᵏ per channel", sym: "grad",
+      caption: "The gradient is one constant per channel here, so LayerCAM's per-voxel weighting has nothing extra to weight. What matters is the sign: everything left of zero is a channel LayerCAM will drop entirely." },
+    { term: "discarded", label: "Σ_{αₖ<0} αₖAᵏ", sym: "hadamard",
+      caption: "The evidence that gets dropped. Because the tap ends in a ReLU, ReLU inside the sum keeps only positive-weight channels, so LayerCAM equals the positive-α sum exactly. This is what Grad-CAM would instead have cancelled against the positives, and it sits right beside the nodule rather than out in the background." },
     { term: "relu", label: "Σₖ ReLU(…)", sym: "relu",
-      caption: "ReLU inside the channel sum rather than after it. That ordering is LayerCAM's actual contribution here." },
+      caption: "What survives. Not a refinement of Grad-CAM on this architecture but a lossier aggregation, which is why it scores 4.63× against Grad-CAM's 5.10×." },
   ],
 
   // 4 formula anchors: H max pblank pcx
