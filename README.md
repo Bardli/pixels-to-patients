@@ -10,7 +10,8 @@ than a toy CNN, on real lung-CT nodule crops. Every heat-map, number and figure 
 code in this repository and hashed in a provenance manifest. Nothing is drawn by
 hand.
 
-- **Model** — [JSC](https://github.com/bowang-lab/JSC) (bowang-lab), the FLARE26
+- **Model** — [JSC](https://github.com/bowang-lab/JSC) (Joint Segmentation and
+  Classification) by Ching-Yuan Yu, University Health Network (UHN), the FLARE26
   AutoMSC joint segmentation + classification baseline: an nnU-Net
   `PlainConvUNet` encoder with an FPN classification head, at the published
   fold-3 checkpoint (validation AUROC **0.8875**).
@@ -249,8 +250,9 @@ the site.
 
 ### Model
 
-> Ching-Yuan Yu, bowang-lab. [JSC](https://github.com/bowang-lab/JSC) — joint
-> segmentation and classification for 3D medical images. Commit
+> Ching-Yuan Yu, University Health Network (UHN). [JSC](https://github.com/bowang-lab/JSC)
+> (Joint Segmentation and Classification) — joint segmentation and classification
+> for 3D medical images. Commit
 > `49511ef01c414014afb7e7a3265d820544bf93cc`, Apache-2.0. Weights from
 > [cyyu96/AutoMSC-Baselines](https://huggingface.co/cyyu96/AutoMSC-Baselines),
 > `Dataset005_LUNA25`, fold 3.
